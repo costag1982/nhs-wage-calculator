@@ -78,10 +78,10 @@ describe('Per-Shift Pay Band Override & Acting Up Calculations', () => {
       new Date(2026, 6, 1)
     );
 
-    // Night enhancement: 10h * 0.41 = 4.10 units @ Band 3 rate (£13.5525/hr ESR) = £55.56
+    // Night enhancement: 10h * 0.41 = 4.10 units @ Band 3 rate (£13.5525/hr) = £55.57
     const nightItem = payslip.payLineItems.find((p) => p.description === 'Night Duty EN');
     expect(nightItem).toBeDefined();
     expect(nightItem?.unitsWorked).toBe(10);
-    expect(nightItem?.amount).toBe(55.56);
+    expect(nightItem?.amount).toBe(55.57);
   });
 });

@@ -151,11 +151,11 @@ describe('Overtime, Additional Hours & Contract Types (AfC Section 3)', () => {
     expect(hourlyPayItem).toBeDefined();
     expect(hourlyPayItem?.amount).toBe(258.49);
 
-    // Night Duty EN: 20h * 0.41 = 8.2h @ £12.9245 ESR = £105.97
+    // Night Duty EN: 20h * 0.41 = 8.2h @ £12.9245 = £105.98
     const nightItem = result.payLineItems.find((p) => p.description === 'Night Duty EN');
     expect(nightItem).toBeDefined();
-    expect(nightItem?.amount).toBe(105.97);
+    expect(nightItem?.amount).toBe(105.98);
 
-    expect(result.grossPay).toBe(364.46);
+    expect(result.grossPay).toBe(364.47);
   });
 });

@@ -39,8 +39,20 @@ export const MetricCards: React.FC<MetricCardsProps> = ({ summary }) => {
         <div className="metric-subtitle">
           Basic: {formatCurrency(summary.monthlyBasicPay)} + Enhancements:{' '}
           {formatCurrency(summary.enhancementsTotal)}
-          {hasAdditionalHours && <> + Additional: {formatCurrency(summary.additionalHoursPay!)}</>}
-          {hasOvertimeHours && <> + Overtime: {formatCurrency(summary.overtimePay!)}</>}
+          {hasAdditionalHours && (
+            <>
+              {' '}
+              + Additional: {formatHours(summary.additionalHours!)}h (
+              {formatCurrency(summary.additionalHoursPay!)})
+            </>
+          )}
+          {hasOvertimeHours && (
+            <>
+              {' '}
+              + Overtime: {formatHours(summary.overtimeHours!)}h (
+              {formatCurrency(summary.overtimePay!)})
+            </>
+          )}
         </div>
       </div>
 
@@ -109,7 +121,7 @@ export const MetricCards: React.FC<MetricCardsProps> = ({ summary }) => {
         </div>
         <div className="metric-subtitle">
           {isOverContracted
-            ? `${formatHours(workedHours - contractedHours)}h over contracted`
+            ? `${formatHours(workedHours - contractedHours)}h above monthly contracted equivalent`
             : `${formatHours(contractedHours - workedHours)}h remaining this month`}
         </div>
       </div>

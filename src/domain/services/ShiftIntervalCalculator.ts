@@ -73,11 +73,11 @@ export class ShiftIntervalCalculator {
     // Apply break ratio evenly across slices to maintain proportionality
     return {
       totalWorkedHours: roundHours(paidMinutes / MINUTES_PER_HOUR),
-      plainDayHours: roundHours((plainDayMinutes * breakRatio) / MINUTES_PER_HOUR),
-      nightHours: roundHours((nightMinutes * breakRatio) / MINUTES_PER_HOUR),
-      saturdayHours: roundHours((saturdayMinutes * breakRatio) / MINUTES_PER_HOUR),
-      sundayHours: roundHours((sundayMinutes * breakRatio) / MINUTES_PER_HOUR),
-      bankHolidayHours: roundHours((bankHolidayMinutes * breakRatio) / MINUTES_PER_HOUR),
+      plainDayHours: (plainDayMinutes * breakRatio) / MINUTES_PER_HOUR,
+      nightHours: (nightMinutes * breakRatio) / MINUTES_PER_HOUR,
+      saturdayHours: (saturdayMinutes * breakRatio) / MINUTES_PER_HOUR,
+      sundayHours: (sundayMinutes * breakRatio) / MINUTES_PER_HOUR,
+      bankHolidayHours: (bankHolidayMinutes * breakRatio) / MINUTES_PER_HOUR,
     };
   }
 

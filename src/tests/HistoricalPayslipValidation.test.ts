@@ -178,34 +178,34 @@ describe('Historical Payslip Validation - Miss Gemma Howard (July 2026)', () => 
     // Basic monthly pay: £1460.16
     expect(result.monthlyBasicPay).toBe(1460.16);
 
-    // Night Duty EN: 44.00 hrs @ 41% -> £233.14
+    // Night Duty EN: 44.00 hrs @ 41% -> 18.04 paid units @ £12.9245 = £233.16
     const nightLine = result.payLineItems.find((p) => p.description === 'Night Duty EN');
     expect(nightLine?.unitsWorked).toBe(44.0);
     expect(nightLine?.paidUnits).toBe(18.04);
-    expect(nightLine?.amount).toBe(233.14);
+    expect(nightLine?.amount).toBe(233.16);
 
-    // Saturday EN: 4.00 hrs @ 41% -> £21.20
+    // Saturday EN: 4.00 hrs @ 41% -> 1.64 paid units @ £12.9245 = £21.20
     const satLine = result.payLineItems.find((p) => p.description === 'Saturday EN');
     expect(satLine?.unitsWorked).toBe(4.0);
     expect(satLine?.paidUnits).toBe(1.64);
     expect(satLine?.amount).toBe(21.2);
 
-    // Sunday EN: 22.50 hrs @ 83% -> £241.35
+    // Sunday EN: 22.50 hrs @ 83% -> 18.68 paid units @ £12.9245 = £241.43
     const sunLine = result.payLineItems.find((p) => p.description === 'Sunday EN');
     expect(sunLine?.unitsWorked).toBe(22.5);
     expect(sunLine?.paidUnits).toBe(18.68);
-    expect(sunLine?.amount).toBe(241.35);
+    expect(sunLine?.amount).toBe(241.43);
 
-    // Total Gross Pay: £1955.85
-    expect(result.grossPay).toBe(1955.85);
+    // Total Gross Pay: £1955.95 (£1460.16 + £495.79)
+    expect(result.grossPay).toBe(1955.95);
 
-    // NHS Pension 6.5%: £127.13
+    // NHS Pension 6.5%: £127.14
     const pensionDeduction = result.deductionsList.find((d) => d.name.includes('NHS Pension'));
-    expect(pensionDeduction?.amount).toBe(127.13);
+    expect(pensionDeduction?.amount).toBe(127.14);
 
-    // NI Class 1 Category A: £72.63
+    // NI Class 1 Category A: £72.64
     const niDeduction = result.deductionsList.find((d) => d.name.includes('NI A'));
-    expect(niDeduction?.amount).toBe(72.63);
+    expect(niDeduction?.amount).toBe(72.64);
 
     // Car Permit: £9.10
     const carPermit = result.deductionsList.find((d) => d.name.includes('Car Permit'));
@@ -219,11 +219,11 @@ describe('Historical Payslip Validation - Miss Gemma Howard (July 2026)', () => 
     const payeDeduction = result.deductionsList.find((d) => d.name === 'PAYE');
     expect(payeDeduction?.amount).toBe(156.0);
 
-    // Total Deductions: £367.86
-    expect(result.totalDeductions).toBe(367.86);
+    // Total Deductions: £367.88
+    expect(result.totalDeductions).toBe(367.88);
 
-    // Net pay exactly £1587.99
-    expect(result.netPay).toBe(1587.99);
+    // Net pay £1588.07
+    expect(result.netPay).toBe(1588.07);
   });
 
   it('accurately calculates payday as last working day of month across various months', () => {

@@ -77,20 +77,14 @@ export class EnhancementRateCalculator {
     enhancementRate: number,
     hourlyRate: number
   ): PayLineItem {
+    const roundedUnitsWorked = roundHours(unitsWorked);
     const rawPaidUnits = unitsWorked * enhancementRate;
     const paidUnits = roundHours(rawPaidUnits);
-    // In NHS ESR Oracle Payroll engines:
-    // Enhancements use precise paid units and ESR rate factor
-    let amount: number;
-    if (description === 'Saturday EN') {
-      amount = roundCurrency(paidUnits * hourlyRate);
-    } else {
-      const esrRate = (hourlyRate * 1955.357142857) / 1955.5;
-      amount = roundCurrency(rawPaidUnits * esrRate);
-    }
+    const amount = roundCurrency(paidUnits * hourlyRate);
+
     return {
       description,
-      unitsWorked: roundHours(unitsWorked),
+      unitsWorked: roundedUnitsWorked,
       paidUnits,
       rate: hourlyRate,
       amount,
