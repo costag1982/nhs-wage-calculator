@@ -152,19 +152,25 @@ describe('Overtime, Additional Hours & Contract Types (AfC Section 3)', () => {
     expect(basicPayItem).toBeDefined();
     expect(basicPayItem?.amount).toBe(1460.16);
 
-    // Bank Hourly Pay: 10.0h * £12.9245 = £129.25
-    const bankHourlyItem = result.payLineItems.find((p) => p.description === 'Bank Hourly Pay');
+    // Bank Basic Pay: 10.0h * £12.9245 = £129.25
+    const bankHourlyItem = result.payLineItems.find((p) => p.description.includes('Bank Basic Pay'));
     expect(bankHourlyItem).toBeDefined();
     expect(bankHourlyItem?.unitsWorked).toBe(10.0);
     expect(bankHourlyItem?.amount).toBe(129.25);
 
-    // Night Duty EN: (10h + 10h + 10h bank) = 30h * 0.41 = 12.3h @ £12.9245 = £158.97
-    const nightItem = result.payLineItems.find((p) => p.description === 'Night Duty EN');
-    expect(nightItem).toBeDefined();
-    expect(nightItem?.unitsWorked).toBe(30.0);
-    expect(nightItem?.amount).toBe(158.97);
+    // Bank Night Duty EN: 10h * 0.41 = 4.1h @ £12.9245 = £52.99
+    // Substantive Night Duty EN: 20h * 0.41 = 8.2h @ £12.9245 = £105.98
+    const substantiveNightItem = result.payLineItems.find((p) => p.description === 'Night Duty EN');
+    expect(substantiveNightItem).toBeDefined();
+    expect(substantiveNightItem?.unitsWorked).toBe(20.0);
+    expect(substantiveNightItem?.amount).toBe(105.98);
 
-    // Gross Pay: £1460.16 (Basic) + £129.25 (Bank) + £158.97 (Night) = £1,748.38
+    const bankNightItem = result.payLineItems.find((p) => p.description === 'Bank Night Duty EN');
+    expect(bankNightItem).toBeDefined();
+    expect(bankNightItem?.unitsWorked).toBe(10.0);
+    expect(bankNightItem?.amount).toBe(52.99);
+
+    // Gross Pay: £1460.16 (Basic) + £105.98 (Substantive Night) + £129.25 (Bank Basic) + £52.99 (Bank Night) = £1,748.38
     expect(result.grossPay).toBe(1748.38);
   });
 
@@ -176,7 +182,7 @@ describe('Overtime, Additional Hours & Contract Types (AfC Section 3)', () => {
     // Expected:
     // - Substantive Additional Hours: exactly 4.0h @ 1.0x (30h - 26h) = £51.70
     // - Substantive Overtime: 0h (substantive hours 30h <= 37.5h FTE threshold; bank must NOT trigger 1.5x overtime)
-    // - Bank Hourly Pay: 10.0h @ £12.9245 = £129.25
+    // - Bank Basic Pay: 10.0h @ £12.9245 = £129.25
     const shifts: Shift[] = [
       { id: '1', date: '2026-07-06', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30, shiftType: 'SUBSTANTIVE' }, // 7.5h
       { id: '2', date: '2026-07-07', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30, shiftType: 'SUBSTANTIVE' }, // 7.5h
@@ -200,8 +206,8 @@ describe('Overtime, Additional Hours & Contract Types (AfC Section 3)', () => {
     expect(result.overtimeHours).toBeUndefined();
     expect(result.overtimePay).toBeUndefined();
 
-    // Bank Hourly Pay: 10.0h
-    const bankItem = result.payLineItems.find((p) => p.description === 'Bank Hourly Pay');
+    // Bank Basic Pay: 10.0h
+    const bankItem = result.payLineItems.find((p) => p.description.includes('Bank Basic Pay'));
     expect(bankItem).toBeDefined();
     expect(bankItem?.unitsWorked).toBe(10.0);
     expect(bankItem?.amount).toBe(129.25);
@@ -242,6 +248,83 @@ describe('Overtime, Additional Hours & Contract Types (AfC Section 3)', () => {
 
     expect(result.grossPay).toBe(364.47);
   });
+
+  it('correctly processes July dataset: excludes bank shifts from 26h additional hours (14.5h) and substantive Sunday EN (14.0h)', () => {
+    // Base Band 2 rate = £12.9245, Band 3 rate = £14.05 (or custom rate / GrossPayCalculator)
+    const band3HourlyRate = 14.05;
+
+    const julyShifts: Shift[] = [
+      // Week 1 (6–12 July): 36.0h substantive (e.g. 4x 7.5h + 6.0h Sunday on 12 July)
+      { id: 'w1-1', date: '2026-07-06', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30, shiftType: 'SUBSTANTIVE' }, // 7.5h
+      { id: 'w1-2', date: '2026-07-07', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30, shiftType: 'SUBSTANTIVE' }, // 7.5h
+      { id: 'w1-3', date: '2026-07-08', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30, shiftType: 'SUBSTANTIVE' }, // 7.5h
+      { id: 'w1-4', date: '2026-07-09', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30, shiftType: 'SUBSTANTIVE' }, // 7.5h
+      { id: 'w1-sun', date: '2026-07-12', startTime: '08:00', endTime: '14:00', unpaidBreakMinutes: 0, shiftType: 'SUBSTANTIVE' }, // 6.0h Sunday
+
+      // Week 2 (13–19 July):
+      // Substantive: 3x 7.5h = 22.5h (< 26.0h -> 0 additional hours)
+      { id: 'w2-1', date: '2026-07-13', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30, shiftType: 'SUBSTANTIVE' }, // 7.5h
+      { id: 'w2-2', date: '2026-07-15', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30, shiftType: 'SUBSTANTIVE' }, // 7.5h
+      { id: 'w2-3', date: '2026-07-17', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30, shiftType: 'SUBSTANTIVE' }, // 7.5h
+      // Bank shifts in Week 2:
+      { id: 'w2-bnk-14', date: '2026-07-14', startTime: '17:00', endTime: '20:00', unpaidBreakMinutes: 0, shiftType: 'BANK' }, // 3.0h Bank (Band 2)
+      { id: 'w2-bnk-19', date: '2026-07-19', startTime: '08:00', endTime: '13:30', unpaidBreakMinutes: 0, shiftType: 'BANK', overrideBand: 'Band 3', customHourlyRate: band3HourlyRate }, // 5.5h Bank Sunday (Band 3)
+
+      // Week 3 (20–26 July): 30.5h substantive (3x 7.5h + 8.0h Sunday on 26 July -> 4.5h additional)
+      { id: 'w3-1', date: '2026-07-20', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30, shiftType: 'SUBSTANTIVE' }, // 7.5h
+      { id: 'w3-2', date: '2026-07-22', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30, shiftType: 'SUBSTANTIVE' }, // 7.5h
+      { id: 'w3-3', date: '2026-07-24', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30, shiftType: 'SUBSTANTIVE' }, // 7.5h
+      { id: 'w3-sun', date: '2026-07-26', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 0, shiftType: 'SUBSTANTIVE' }, // 8.0h Sunday
+
+      // Week 4 (27–31 July): 22.5h substantive (3x 7.5h -> 0 additional)
+      { id: 'w4-1', date: '2026-07-27', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30, shiftType: 'SUBSTANTIVE' }, // 7.5h
+      { id: 'w4-2', date: '2026-07-29', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30, shiftType: 'SUBSTANTIVE' }, // 7.5h
+      { id: 'w4-3', date: '2026-07-31', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30, shiftType: 'SUBSTANTIVE' }, // 7.5h
+    ];
+
+    const result = WageCalculatorService.calculateMonthlyPayslip(
+      baseProfile,
+      julyShifts,
+      [],
+      new Date(2026, 6, 1) // July 2026
+    );
+
+    // 1. Substantive Additional Hours: strictly 14.5h (10.0h + 0h + 4.5h + 0h)
+    expect(result.additionalHours).toBe(14.5);
+    expect(result.additionalHoursPay).toBe(187.41);
+    expect(result.overtimeHours).toBeUndefined();
+
+    // 2. Substantive Sunday EN: strictly 14.0h (6h on 12 July + 8h on 26 July)
+    const substantiveSundayItem = result.payLineItems.find((p) => p.description === 'Sunday EN');
+    expect(substantiveSundayItem).toBeDefined();
+    expect(substantiveSundayItem?.unitsWorked).toBe(14.0);
+    expect(substantiveSundayItem?.paidUnits).toBe(11.62); // 14h * 0.83 = 11.62h
+    expect(substantiveSundayItem?.amount).toBe(150.18); // 11.62 * 12.9245 = 150.18
+
+    // 3. No Acting Up Allowance (Band 3 was worked as a Bank shift, not substantive acting up)
+    const actingUpItem = result.payLineItems.find((p) => p.description === 'Higher Band / Acting Up Allowance');
+    expect(actingUpItem).toBeUndefined();
+
+    // 4. Bank Basic Pay
+    const bankBand3Item = result.payLineItems.find((p) => p.description.includes('Bank Basic Pay (Band 3)'));
+    expect(bankBand3Item).toBeDefined();
+    expect(bankBand3Item?.unitsWorked).toBe(5.5);
+    expect(bankBand3Item?.rate).toBe(14.05);
+    expect(bankBand3Item?.amount).toBe(77.28);
+
+    const bankBand2Item = result.payLineItems.find((p) => p.description === 'Bank Basic Pay');
+    expect(bankBand2Item).toBeDefined();
+    expect(bankBand2Item?.unitsWorked).toBe(3.0);
+    expect(bankBand2Item?.amount).toBe(38.77);
+
+    // 5. Bank Sunday Enhancement
+    const bankSundayItem = result.payLineItems.find((p) => p.description === 'Bank Sunday EN');
+    expect(bankSundayItem).toBeDefined();
+    expect(bankSundayItem?.unitsWorked).toBe(5.5);
+    expect(bankSundayItem?.paidUnits).toBe(4.56); // roundHours(5.5 * 0.83) = 4.56
+    expect(bankSundayItem?.amount).toBe(64.07); // 4.56 * 14.05 = 64.07
+  });
 });
+
 
 

@@ -18,7 +18,7 @@ import {
   getPaymentMonthDate,
 } from '../utils/dateUtils';
 
-interface AggregatedEnhancements {
+interface SubstantiveEnhancements {
   nightHours: number;
   nightPaidUnits: number;
   nightAmount: number;
@@ -33,10 +33,14 @@ interface AggregatedEnhancements {
   bhAmount: number;
   actingUpHours: number;
   actingUpAmount: number;
-  totalBankBasicHours: number;
-  totalBankBasicPay: number;
 }
 
+interface BankCalculationResult {
+  payLineItems: PayLineItem[];
+  totalBasicPay: number;
+  totalEnhancementAmount: number;
+  totalHours: number;
+}
 
 interface OvertimeCalculationResult {
   additionalHours: number;
@@ -59,27 +63,48 @@ export class WageCalculatorService {
   ): PayslipSummary {
     const baseRates = GrossPayCalculator.calculateBaseRates(profile);
     const hoursBreakdown = this.aggregateShiftHours(shifts);
-    const enhancements = this.aggregateShiftEnhancements(shifts, profile, baseRates.hourlyRate);
 
+    // Separate substantive shifts from bank shifts
+    const substantiveShifts =
+      profile.contractType === 'SUBSTANTIVE'
+        ? shifts.filter((s) => s.shiftType !== 'BANK')
+        : [];
+    const bankShifts =
+      profile.contractType === 'BANK_HOURLY'
+        ? shifts
+        : shifts.filter((s) => s.shiftType === 'BANK');
+
+    // 1. Substantive Additional Hours & Overtime calculation (AfC Section 3)
     const overtimeResult =
       profile.contractType === 'SUBSTANTIVE'
-        ? this.calculateAdditionalAndOvertimePay(shifts, profile, baseRates.hourlyRate)
+        ? this.calculateAdditionalAndOvertimePay(substantiveShifts, profile, baseRates.hourlyRate)
         : { additionalHours: 0, additionalHoursPay: 0, overtimeHours: 0, overtimePay: 0 };
 
+    // 2. Substantive Unsocial Enhancements & Acting Up (AfC Section 2)
+    const substantiveEnhancements =
+      profile.contractType === 'SUBSTANTIVE'
+        ? this.aggregateSubstantiveEnhancements(substantiveShifts, profile, baseRates.hourlyRate)
+        : this.getEmptyEnhancements();
+
+    // 3. Bank Pay & Bank Enhancements calculation (Separate Bank Assignment)
+    const bankResults = this.aggregateBankPay(bankShifts, profile, baseRates.hourlyRate);
+
+    // 4. Build pay line items matching NHS ESR payslip
     const payLineItems = this.buildPayLineItems(
       profile,
       baseRates,
-      hoursBreakdown,
-      enhancements,
-      overtimeResult
+      substantiveEnhancements,
+      overtimeResult,
+      bankResults
     );
 
     const totalEnhancements = roundCurrency(
-      enhancements.nightAmount +
-        enhancements.satAmount +
-        enhancements.sunAmount +
-        enhancements.bhAmount +
-        enhancements.actingUpAmount
+      substantiveEnhancements.nightAmount +
+        substantiveEnhancements.satAmount +
+        substantiveEnhancements.sunAmount +
+        substantiveEnhancements.bhAmount +
+        substantiveEnhancements.actingUpAmount +
+        bankResults.totalEnhancementAmount
     );
 
     const grossPay = roundCurrency(payLineItems.reduce((acc, item) => acc + item.amount, 0));
@@ -157,12 +182,8 @@ export class WageCalculatorService {
     };
   }
 
-  private static aggregateShiftEnhancements(
-    shifts: Shift[],
-    profile: EmployeeProfile,
-    baseHourlyRate: number
-  ): AggregatedEnhancements {
-    const agg: AggregatedEnhancements = {
+  private static getEmptyEnhancements(): SubstantiveEnhancements {
+    return {
       nightHours: 0,
       nightPaidUnits: 0,
       nightAmount: 0,
@@ -177,11 +198,17 @@ export class WageCalculatorService {
       bhAmount: 0,
       actingUpHours: 0,
       actingUpAmount: 0,
-      totalBankBasicHours: 0,
-      totalBankBasicPay: 0,
     };
+  }
 
-    // Group shifts by (band, rate) to aggregate monthly worked hours per rate group
+  private static aggregateSubstantiveEnhancements(
+    substantiveShifts: Shift[],
+    profile: EmployeeProfile,
+    baseHourlyRate: number
+  ): SubstantiveEnhancements {
+    const agg = this.getEmptyEnhancements();
+
+    // Group substantive shifts by (band, rate)
     const groups = new Map<
       string,
       {
@@ -191,7 +218,7 @@ export class WageCalculatorService {
       }
     >();
 
-    for (const shift of shifts) {
+    for (const shift of substantiveShifts) {
       const breakdown = shift.breakdown || ShiftIntervalCalculator.calculateBreakdown(shift);
       const shiftBand = shift.overrideBand || profile.band;
       const shiftRate =
@@ -200,12 +227,7 @@ export class WageCalculatorService {
           ? GrossPayCalculator.getHourlyRateForBand(shift.overrideBand)
           : baseHourlyRate);
 
-      const isBankShift = profile.contractType === 'BANK_HOURLY' || shift.shiftType === 'BANK';
-
-      if (isBankShift) {
-        agg.totalBankBasicHours += breakdown.totalWorkedHours;
-        agg.totalBankBasicPay += breakdown.totalWorkedHours * shiftRate;
-      } else if (shiftRate > baseHourlyRate) {
+      if (shiftRate > baseHourlyRate) {
         const diff = shiftRate - baseHourlyRate;
         agg.actingUpHours += breakdown.totalWorkedHours;
         agg.actingUpAmount += breakdown.totalWorkedHours * diff;
@@ -277,20 +299,137 @@ export class WageCalculatorService {
     agg.bhHours = roundHours(agg.bhHours);
     agg.bhPaidUnits = roundHours(agg.bhPaidUnits);
     agg.bhAmount = roundCurrency(agg.bhAmount);
+    agg.actingUpHours = roundHours(agg.actingUpHours);
+    agg.actingUpAmount = roundCurrency(agg.actingUpAmount);
 
     return agg;
+  }
+
+  private static aggregateBankPay(
+    bankShifts: Shift[],
+    profile: EmployeeProfile,
+    baseHourlyRate: number
+  ): BankCalculationResult {
+    if (bankShifts.length === 0) {
+      return {
+        payLineItems: [],
+        totalBasicPay: 0,
+        totalEnhancementAmount: 0,
+        totalHours: 0,
+      };
+    }
+
+    const groups = new Map<
+      string,
+      {
+        band: NhsBandLevel;
+        rate: number;
+        breakdown: ShiftHoursBreakdown;
+      }
+    >();
+
+    for (const shift of bankShifts) {
+      const breakdown = shift.breakdown || ShiftIntervalCalculator.calculateBreakdown(shift);
+      const shiftBand = shift.overrideBand || profile.band;
+      const shiftRate =
+        shift.customHourlyRate ??
+        (shift.overrideBand
+          ? GrossPayCalculator.getHourlyRateForBand(shift.overrideBand)
+          : baseHourlyRate);
+
+      const key = `${shiftBand}_${shiftRate}`;
+      let group = groups.get(key);
+      if (!group) {
+        group = {
+          band: shiftBand,
+          rate: shiftRate,
+          breakdown: {
+            totalWorkedHours: 0,
+            plainDayHours: 0,
+            nightHours: 0,
+            saturdayHours: 0,
+            sundayHours: 0,
+            bankHolidayHours: 0,
+          },
+        };
+        groups.set(key, group);
+      }
+
+      group.breakdown.totalWorkedHours += breakdown.totalWorkedHours;
+      group.breakdown.plainDayHours += breakdown.plainDayHours;
+      group.breakdown.nightHours += breakdown.nightHours;
+      group.breakdown.saturdayHours += breakdown.saturdayHours;
+      group.breakdown.sundayHours += breakdown.sundayHours;
+      group.breakdown.bankHolidayHours += breakdown.bankHolidayHours;
+    }
+
+    const payLineItems: PayLineItem[] = [];
+    let totalBasicPay = 0;
+    let totalEnhancementAmount = 0;
+    let totalHours = 0;
+
+    for (const group of groups.values()) {
+      const groupHours = roundHours(group.breakdown.totalWorkedHours);
+      const groupBasicAmount = roundCurrency(groupHours * group.rate);
+      totalHours += groupHours;
+      totalBasicPay += groupBasicAmount;
+
+      const isPureBank = profile.contractType === 'BANK_HOURLY';
+      let basicDescription = isPureBank ? 'Basic Hourly Pay' : 'Bank Basic Pay';
+      if (!isPureBank && group.band !== profile.band) {
+        basicDescription = `Bank Basic Pay (${group.band})`;
+      }
+
+      payLineItems.push({
+        description: basicDescription,
+        unitsWorked: groupHours,
+        paidUnits: groupHours,
+        rate: group.rate,
+        amount: groupBasicAmount,
+      });
+
+      // Enhancements on bank shifts
+      const { payLineItems: groupEnhancements } = EnhancementRateCalculator.calculateEnhancements(
+        group.band,
+        group.rate,
+        group.breakdown
+      );
+
+      for (const item of groupEnhancements) {
+        if (item.amount > 0) {
+          totalEnhancementAmount += item.amount;
+          const enhancementDescription = isPureBank
+            ? item.description
+            : `Bank ${item.description}`;
+          payLineItems.push({
+            description: enhancementDescription,
+            unitsWorked: item.unitsWorked,
+            paidUnits: item.paidUnits,
+            rate: item.rate,
+            amount: item.amount,
+          });
+        }
+      }
+    }
+
+    return {
+      payLineItems,
+      totalBasicPay: roundCurrency(totalBasicPay),
+      totalEnhancementAmount: roundCurrency(totalEnhancementAmount),
+      totalHours: roundHours(totalHours),
+    };
   }
 
   private static buildPayLineItems(
     profile: EmployeeProfile,
     baseRates: GrossPayResult,
-    hoursBreakdown: ShiftHoursBreakdown,
-    enhancements: AggregatedEnhancements,
-    overtimeResult: OvertimeCalculationResult
+    substantiveEnhancements: SubstantiveEnhancements,
+    overtimeResult: OvertimeCalculationResult,
+    bankResults: BankCalculationResult
   ): PayLineItem[] {
     const payLineItems: PayLineItem[] = [];
 
-    // Substantive basic pay
+    // Substantive basic pay & overtime
     if (profile.contractType === 'SUBSTANTIVE') {
       payLineItems.push({
         description: 'Basic Pay',
@@ -319,88 +458,69 @@ export class WageCalculatorService {
           amount: roundCurrency(overtimeResult.overtimePay),
         });
       }
-    }
 
-    // Bank hourly basic pay
-    if (profile.contractType === 'BANK_HOURLY') {
-      payLineItems.push({
-        description: 'Basic Hourly Pay',
-        unitsWorked: hoursBreakdown.totalWorkedHours,
-        paidUnits: hoursBreakdown.totalWorkedHours,
-        rate: baseRates.hourlyRate,
-        amount: roundCurrency(enhancements.totalBankBasicPay),
-      });
-    } else {
-      // Substantive profile with bank shifts
-      if (enhancements.totalBankBasicPay > 0) {
-        const bankUnits = roundHours(enhancements.totalBankBasicHours);
-        const avgBankRate =
-          bankUnits > 0
-            ? roundHourlyRate(enhancements.totalBankBasicPay / bankUnits)
-            : baseRates.hourlyRate;
+      // Substantive Unsocial Enhancements
+      if (substantiveEnhancements.nightAmount > 0) {
         payLineItems.push({
-          description: 'Bank Hourly Pay',
-          unitsWorked: bankUnits,
-          paidUnits: bankUnits,
-          rate: avgBankRate,
-          amount: roundCurrency(enhancements.totalBankBasicPay),
+          description: 'Night Duty EN',
+          unitsWorked: roundHours(substantiveEnhancements.nightHours),
+          paidUnits: roundHours(substantiveEnhancements.nightPaidUnits),
+          rate: baseRates.hourlyRate,
+          amount: roundCurrency(substantiveEnhancements.nightAmount),
         });
       }
 
-      if (enhancements.actingUpAmount > 0) {
+      if (substantiveEnhancements.satAmount > 0) {
+        payLineItems.push({
+          description: 'Saturday EN',
+          unitsWorked: roundHours(substantiveEnhancements.satHours),
+          paidUnits: roundHours(substantiveEnhancements.satPaidUnits),
+          rate: baseRates.hourlyRate,
+          amount: roundCurrency(substantiveEnhancements.satAmount),
+        });
+      }
+
+      if (substantiveEnhancements.sunAmount > 0) {
+        payLineItems.push({
+          description: 'Sunday EN',
+          unitsWorked: roundHours(substantiveEnhancements.sunHours),
+          paidUnits: roundHours(substantiveEnhancements.sunPaidUnits),
+          rate: baseRates.hourlyRate,
+          amount: roundCurrency(substantiveEnhancements.sunAmount),
+        });
+      }
+
+      if (substantiveEnhancements.bhAmount > 0) {
+        payLineItems.push({
+          description: 'Public Holiday EN',
+          unitsWorked: roundHours(substantiveEnhancements.bhHours),
+          paidUnits: roundHours(substantiveEnhancements.bhPaidUnits),
+          rate: baseRates.hourlyRate,
+          amount: roundCurrency(substantiveEnhancements.bhAmount),
+        });
+      }
+
+      if (substantiveEnhancements.actingUpAmount > 0) {
         payLineItems.push({
           description: 'Higher Band / Acting Up Allowance',
-          unitsWorked: roundHours(enhancements.actingUpHours),
-          paidUnits: roundHours(enhancements.actingUpHours),
-          rate: roundHourlyRate(enhancements.actingUpAmount / enhancements.actingUpHours),
-          amount: roundCurrency(enhancements.actingUpAmount),
+          unitsWorked: roundHours(substantiveEnhancements.actingUpHours),
+          paidUnits: roundHours(substantiveEnhancements.actingUpHours),
+          rate: roundHourlyRate(
+            substantiveEnhancements.actingUpAmount / substantiveEnhancements.actingUpHours
+          ),
+          amount: roundCurrency(substantiveEnhancements.actingUpAmount),
         });
       }
     }
 
-    // Enhancements
-    if (enhancements.nightAmount > 0) {
-      payLineItems.push({
-        description: 'Night Duty EN',
-        unitsWorked: roundHours(enhancements.nightHours),
-        paidUnits: roundHours(enhancements.nightPaidUnits),
-        rate: baseRates.hourlyRate,
-        amount: roundCurrency(enhancements.nightAmount),
-      });
-    }
-
-    if (enhancements.satAmount > 0) {
-      payLineItems.push({
-        description: 'Saturday EN',
-        unitsWorked: roundHours(enhancements.satHours),
-        paidUnits: roundHours(enhancements.satPaidUnits),
-        rate: baseRates.hourlyRate,
-        amount: roundCurrency(enhancements.satAmount),
-      });
-    }
-
-    if (enhancements.sunAmount > 0) {
-      payLineItems.push({
-        description: 'Sunday EN',
-        unitsWorked: roundHours(enhancements.sunHours),
-        paidUnits: roundHours(enhancements.sunPaidUnits),
-        rate: baseRates.hourlyRate,
-        amount: roundCurrency(enhancements.sunAmount),
-      });
-    }
-
-    if (enhancements.bhAmount > 0) {
-      payLineItems.push({
-        description: 'Public Holiday EN',
-        unitsWorked: roundHours(enhancements.bhHours),
-        paidUnits: roundHours(enhancements.bhPaidUnits),
-        rate: baseRates.hourlyRate,
-        amount: roundCurrency(enhancements.bhAmount),
-      });
+    // Append Bank Pay Line Items (Bank Basic Pay and Bank Enhancements)
+    for (const bankItem of bankResults.payLineItems) {
+      payLineItems.push(bankItem);
     }
 
     return payLineItems;
   }
+
 
   private static calculateDeductions(
     grossPay: number,
