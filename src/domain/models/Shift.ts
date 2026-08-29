@@ -29,6 +29,8 @@ export interface ShiftHoursBreakdown {
   bankHolidayHours: number; // UK Bank Holiday 00:00-24:00
 }
 
+export type ShiftWorkType = 'SUBSTANTIVE' | 'BANK';
+
 export interface Shift {
   id: string;
   date: string; // ISO "YYYY-MM-DD"
@@ -36,7 +38,9 @@ export interface Shift {
   endTime: string; // "HH:mm" (e.g. "19:30" or "07:30")
   unpaidBreakMinutes: number;
   presetType?: ShiftPresetType;
+  shiftType?: ShiftWorkType; // 'SUBSTANTIVE' (default) or 'BANK'
   overrideBand?: NhsBandLevel;
   customHourlyRate?: number;
   breakdown?: ShiftHoursBreakdown;
 }
+

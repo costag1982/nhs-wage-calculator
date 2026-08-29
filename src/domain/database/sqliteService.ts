@@ -51,7 +51,8 @@ class SqliteStorage {
         unpaid_break_minutes INTEGER NOT NULL,
         preset_type TEXT,
         override_band TEXT,
-        custom_hourly_rate REAL
+        custom_hourly_rate REAL,
+        shift_type TEXT
       );
 
       CREATE TABLE IF NOT EXISTS employee_profile (
@@ -95,6 +96,11 @@ class SqliteStorage {
     } catch {
       // Column already exists
     }
+    try {
+      db.run('ALTER TABLE shifts ADD COLUMN shift_type TEXT');
+    } catch {
+      // Column already exists
+    }
 
     // Check if profile exists, if not seed with default Gemma profile
     const profileRes = db.exec('SELECT COUNT(*) as count FROM employee_profile');
@@ -118,7 +124,7 @@ class SqliteStorage {
     if (!shiftCount) {
       for (const shift of DEFAULT_GEMMA_JUNE_SHIFTS) {
         db.run(
-          'INSERT INTO shifts (id, date, start_time, end_time, unpaid_break_minutes, preset_type, override_band, custom_hourly_rate) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+          'INSERT INTO shifts (id, date, start_time, end_time, unpaid_break_minutes, preset_type, override_band, custom_hourly_rate, shift_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
           [
             shift.id,
             shift.date,
@@ -128,6 +134,7 @@ class SqliteStorage {
             shift.presetType || null,
             shift.overrideBand || null,
             shift.customHourlyRate ?? null,
+            shift.shiftType || 'SUBSTANTIVE',
           ]
         );
       }
@@ -142,7 +149,7 @@ class SqliteStorage {
   public static async getAllShifts(): Promise<Shift[]> {
     const db = await this.getDb();
     const res = db.exec(
-      'SELECT id, date, start_time, end_time, unpaid_break_minutes, preset_type, override_band, custom_hourly_rate FROM shifts ORDER BY date ASC'
+      'SELECT id, date, start_time, end_time, unpaid_break_minutes, preset_type, override_band, custom_hourly_rate, shift_type FROM shifts ORDER BY date ASC'
     );
     if (!res || res.length === 0) return [];
 
@@ -161,6 +168,7 @@ class SqliteStorage {
         endTime: rowObj.end_time as string,
         unpaidBreakMinutes: (rowObj.unpaid_break_minutes as number) || 0,
         presetType: rowObj.preset_type as Shift['presetType'],
+        shiftType: (rowObj.shift_type as Shift['shiftType']) || 'SUBSTANTIVE',
         overrideBand: rowObj.override_band
           ? (rowObj.override_band as Shift['overrideBand'])
           : undefined,
@@ -174,7 +182,7 @@ class SqliteStorage {
   public static async saveShift(shift: Shift): Promise<void> {
     const db = await this.getDb();
     db.run(
-      'INSERT OR REPLACE INTO shifts (id, date, start_time, end_time, unpaid_break_minutes, preset_type, override_band, custom_hourly_rate) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT OR REPLACE INTO shifts (id, date, start_time, end_time, unpaid_break_minutes, preset_type, override_band, custom_hourly_rate, shift_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [
         shift.id,
         shift.date,
@@ -184,6 +192,7 @@ class SqliteStorage {
         shift.presetType || null,
         shift.overrideBand || null,
         shift.customHourlyRate ?? null,
+        shift.shiftType || 'SUBSTANTIVE',
       ]
     );
     await this.persistToIndexedDb(db);
@@ -206,7 +215,7 @@ class SqliteStorage {
     db.run('DELETE FROM shifts');
     for (const shift of shifts) {
       db.run(
-        'INSERT INTO shifts (id, date, start_time, end_time, unpaid_break_minutes, preset_type, override_band, custom_hourly_rate) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO shifts (id, date, start_time, end_time, unpaid_break_minutes, preset_type, override_band, custom_hourly_rate, shift_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
         [
           shift.id,
           shift.date,
@@ -216,6 +225,7 @@ class SqliteStorage {
           shift.presetType || null,
           shift.overrideBand || null,
           shift.customHourlyRate ?? null,
+          shift.shiftType || 'SUBSTANTIVE',
         ]
       );
     }

@@ -16,7 +16,10 @@ describe('SQLite Database Schema & Operations', () => {
         start_time TEXT NOT NULL,
         end_time TEXT NOT NULL,
         unpaid_break_minutes INTEGER NOT NULL,
-        preset_type TEXT
+        preset_type TEXT,
+        override_band TEXT,
+        custom_hourly_rate REAL,
+        shift_type TEXT
       );
 
       CREATE TABLE IF NOT EXISTS employee_profile (
@@ -37,10 +40,11 @@ describe('SQLite Database Schema & Operations', () => {
       endTime: '06:00',
       unpaidBreakMinutes: 30,
       presetType: 'TWILIGHT',
+      shiftType: 'BANK',
     };
 
     db.run(
-      'INSERT INTO shifts (id, date, start_time, end_time, unpaid_break_minutes, preset_type) VALUES (?, ?, ?, ?, ?, ?)',
+      'INSERT INTO shifts (id, date, start_time, end_time, unpaid_break_minutes, preset_type, override_band, custom_hourly_rate, shift_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [
         sampleShift.id,
         sampleShift.date,
@@ -48,15 +52,19 @@ describe('SQLite Database Schema & Operations', () => {
         sampleShift.endTime,
         sampleShift.unpaidBreakMinutes,
         sampleShift.presetType || null,
+        sampleShift.overrideBand || null,
+        sampleShift.customHourlyRate ?? null,
+        sampleShift.shiftType || 'SUBSTANTIVE',
       ]
     );
 
-    const res = db.exec('SELECT * FROM shifts WHERE id = "test-shift-1"');
+    const res = db.exec('SELECT id, date, start_time, end_time, shift_type FROM shifts WHERE id = "test-shift-1"');
     expect(res.length).toBe(1);
     expect(res[0].values[0][0]).toBe('test-shift-1');
     expect(res[0].values[0][1]).toBe('2026-07-06');
     expect(res[0].values[0][2]).toBe('22:00');
     expect(res[0].values[0][3]).toBe('06:00');
+    expect(res[0].values[0][4]).toBe('BANK');
   });
 
   it('exports and restores SQLite binary data correctly', async () => {

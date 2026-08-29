@@ -184,6 +184,19 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                       </div>
 
                       <div className="shift-pill-tags">
+                        {shift.shiftType === 'BANK' && (
+                          <span
+                            className="enhancement-micro-badge"
+                            style={{
+                              background: '#e0e7ff',
+                              color: '#4338ca',
+                              borderColor: '#c7d2fe',
+                              fontWeight: 700,
+                            }}
+                          >
+                            Bank
+                          </span>
+                        )}
                         {shift.overrideBand && (
                           <span
                             className="enhancement-micro-badge"

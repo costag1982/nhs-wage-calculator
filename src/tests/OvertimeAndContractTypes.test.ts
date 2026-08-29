@@ -123,6 +123,90 @@ describe('Overtime, Additional Hours & Contract Types (AfC Section 3)', () => {
     expect(result.overtimePay).toBeUndefined();
   });
 
+  it('excludes Bank shifts from substantive 26h additional-hours calculation preventing pay overstatement', () => {
+    // Substantive employee with 26.0h weekly contract
+    // Week 27: 26.0h substantive shifts (2x 10h + 1x 6h) + 1x 10h Bank shift (total 36.0h worked)
+    // Bank shift must NOT trigger 10.0h Additional Hours on substantive contract
+    const shifts: Shift[] = [
+      { id: '1', date: '2026-07-06', startTime: '20:00', endTime: '06:00', unpaidBreakMinutes: 0, shiftType: 'SUBSTANTIVE' }, // 10h Night
+      { id: '2', date: '2026-07-07', startTime: '20:00', endTime: '06:00', unpaidBreakMinutes: 0, shiftType: 'SUBSTANTIVE' }, // 10h Night
+      { id: '3', date: '2026-07-08', startTime: '08:00', endTime: '14:00', unpaidBreakMinutes: 0, shiftType: 'SUBSTANTIVE' }, // 6h Day
+      { id: '4', date: '2026-07-09', startTime: '20:00', endTime: '06:00', unpaidBreakMinutes: 0, shiftType: 'BANK' },        // 10h Bank Night
+    ];
+
+    const result = WageCalculatorService.calculateMonthlyPayslip(
+      baseProfile,
+      shifts,
+      [],
+      new Date(2026, 6, 1)
+    );
+
+    // Substantive additional hours and overtime must be 0 (not 10.0h)
+    expect(result.additionalHours).toBeUndefined();
+    expect(result.additionalHoursPay).toBeUndefined();
+    expect(result.overtimeHours).toBeUndefined();
+    expect(result.overtimePay).toBeUndefined();
+
+    // Basic Pay: £1,460.16 (covers 26h/wk contracted)
+    const basicPayItem = result.payLineItems.find((p) => p.description === 'Basic Pay');
+    expect(basicPayItem).toBeDefined();
+    expect(basicPayItem?.amount).toBe(1460.16);
+
+    // Bank Hourly Pay: 10.0h * £12.9245 = £129.25
+    const bankHourlyItem = result.payLineItems.find((p) => p.description === 'Bank Hourly Pay');
+    expect(bankHourlyItem).toBeDefined();
+    expect(bankHourlyItem?.unitsWorked).toBe(10.0);
+    expect(bankHourlyItem?.amount).toBe(129.25);
+
+    // Night Duty EN: (10h + 10h + 10h bank) = 30h * 0.41 = 12.3h @ £12.9245 = £158.97
+    const nightItem = result.payLineItems.find((p) => p.description === 'Night Duty EN');
+    expect(nightItem).toBeDefined();
+    expect(nightItem?.unitsWorked).toBe(30.0);
+    expect(nightItem?.amount).toBe(158.97);
+
+    // Gross Pay: £1460.16 (Basic) + £129.25 (Bank) + £158.97 (Night) = £1,748.38
+    expect(result.grossPay).toBe(1748.38);
+  });
+
+  it('calculates substantive additional hours strictly from substantive shifts when mixed with bank shifts', () => {
+    // 26.0h contracted.
+    // Substantive worked: 4x 7.5h = 30.0h in Week 27 (4.0h substantive excess over 26.0h)
+    // Bank worked: 1x 10.0h in Week 27
+    // Total hours in week = 40.0h (which exceeds FTE 37.5h if bank were mistakenly included!)
+    // Expected:
+    // - Substantive Additional Hours: exactly 4.0h @ 1.0x (30h - 26h) = £51.70
+    // - Substantive Overtime: 0h (substantive hours 30h <= 37.5h FTE threshold; bank must NOT trigger 1.5x overtime)
+    // - Bank Hourly Pay: 10.0h @ £12.9245 = £129.25
+    const shifts: Shift[] = [
+      { id: '1', date: '2026-07-06', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30, shiftType: 'SUBSTANTIVE' }, // 7.5h
+      { id: '2', date: '2026-07-07', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30, shiftType: 'SUBSTANTIVE' }, // 7.5h
+      { id: '3', date: '2026-07-08', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30, shiftType: 'SUBSTANTIVE' }, // 7.5h
+      { id: '4', date: '2026-07-09', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30, shiftType: 'SUBSTANTIVE' }, // 7.5h
+      { id: '5', date: '2026-07-10', startTime: '20:00', endTime: '06:00', unpaidBreakMinutes: 0, shiftType: 'BANK' },        // 10.0h Bank Night
+    ];
+
+    const result = WageCalculatorService.calculateMonthlyPayslip(
+      baseProfile,
+      shifts,
+      [],
+      new Date(2026, 6, 1)
+    );
+
+    // Substantive Additional Hours: strictly 4.0h
+    expect(result.additionalHours).toBe(4.0);
+    expect(result.additionalHoursPay).toBe(51.7);
+
+    // Substantive Overtime: MUST be undefined / 0
+    expect(result.overtimeHours).toBeUndefined();
+    expect(result.overtimePay).toBeUndefined();
+
+    // Bank Hourly Pay: 10.0h
+    const bankItem = result.payLineItems.find((p) => p.description === 'Bank Hourly Pay');
+    expect(bankItem).toBeDefined();
+    expect(bankItem?.unitsWorked).toBe(10.0);
+    expect(bankItem?.amount).toBe(129.25);
+  });
+
   it('calculates Bank Hourly contract type correctly based on actual worked hours only', () => {
     const bankProfile: EmployeeProfile = {
       ...baseProfile,
@@ -159,3 +243,5 @@ describe('Overtime, Additional Hours & Contract Types (AfC Section 3)', () => {
     expect(result.grossPay).toBe(364.47);
   });
 });
+
+

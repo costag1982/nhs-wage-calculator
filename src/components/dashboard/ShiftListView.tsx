@@ -79,6 +79,21 @@ export const ShiftListView: React.FC<ShiftListViewProps> = ({
                   <span style={{ fontWeight: 600 }}>
                     {shift.presetType ? shift.presetType.replace('_', ' ') : 'Custom'}
                   </span>
+                  {shift.shiftType === 'BANK' && (
+                    <span
+                      style={{
+                        marginLeft: '6px',
+                        fontSize: '0.6875rem',
+                        fontWeight: 700,
+                        color: '#4338ca',
+                        background: '#e0e7ff',
+                        padding: '1px 5px',
+                        borderRadius: '4px',
+                      }}
+                    >
+                      Bank
+                    </span>
+                  )}
                   {shift.overrideBand && (
                     <span
                       style={{

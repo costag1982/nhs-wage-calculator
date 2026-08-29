@@ -4,13 +4,25 @@ import {
   ShiftPresetType,
   ShiftPreset,
   ShiftHoursBreakdown,
+  ShiftWorkType,
 } from '../../domain/models/Shift';
 import { NhsBandLevel } from '../../domain/models/Contract';
 import { ShiftIntervalCalculator } from '../../domain/services/ShiftIntervalCalculator';
 import { GrossPayCalculator } from '../../domain/services/GrossPayCalculator';
 import { getBankHolidayTitle } from '../../domain/constants/bankHolidays';
 import { NHS_BAND_CONFIGS, NhsBandConfig } from '../../domain/constants/nhsBands';
-import { X, Trash2, Check, Clock, Sparkles, Coins, AlertTriangle, ShieldCheck } from 'lucide-react';
+import {
+  X,
+  Trash2,
+  Check,
+  Clock,
+  Sparkles,
+  Coins,
+  AlertTriangle,
+  ShieldCheck,
+  Briefcase,
+} from 'lucide-react';
+
 
 interface ShiftModalProps {
   isOpen: boolean;
@@ -108,6 +120,9 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
   const [presetType, setPresetType] = useState<ShiftPresetType>(
     initialShift?.presetType || 'TWILIGHT'
   );
+  const [shiftType, setShiftType] = useState<ShiftWorkType>(
+    initialShift?.shiftType || 'SUBSTANTIVE'
+  );
   const [startTime, setStartTime] = useState<string>(initialShift?.startTime || '22:00');
   const [endTime, setEndTime] = useState<string>(initialShift?.endTime || '06:00');
   const [unpaidBreakMinutes, setUnpaidBreakMinutes] = useState<number>(
@@ -197,6 +212,7 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
       endTime,
       unpaidBreakMinutes,
       presetType,
+      shiftType,
       overrideBand: overrideBand ? (overrideBand as NhsBandLevel) : undefined,
       customHourlyRate: overrideBand === 'Custom' && customRate ? Number(customRate) : undefined,
     });
@@ -268,6 +284,38 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
                 <span>UK Bank Holiday: {bankHolidayName} (Paid at +83% unsocial rate)</span>
               </div>
             )}
+
+            {/* Shift Work / Contract Type Selector */}
+            <div className="form-group">
+              <label className="form-label">
+                <Briefcase size={14} style={{ display: 'inline', marginRight: '4px' }} />
+                Contract & Work Type
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                <button
+                  type="button"
+                  className={`preset-btn ${shiftType === 'SUBSTANTIVE' ? 'active' : ''}`}
+                  onClick={() => setShiftType('SUBSTANTIVE')}
+                  style={{ textAlign: 'left', alignItems: 'flex-start', padding: '0.6rem 0.75rem' }}
+                >
+                  <span style={{ fontWeight: 700 }}>Substantive Shift</span>
+                  <span className="preset-btn-time">
+                    Contracted post (counts towards 26h additional hours)
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  className={`preset-btn ${shiftType === 'BANK' ? 'active' : ''}`}
+                  onClick={() => setShiftType('BANK')}
+                  style={{ textAlign: 'left', alignItems: 'flex-start', padding: '0.6rem 0.75rem' }}
+                >
+                  <span style={{ fontWeight: 700, color: 'var(--indigo)' }}>Bank Shift</span>
+                  <span className="preset-btn-time">
+                    Paid at Bank Hourly Rate (excluded from 26h threshold)
+                  </span>
+                </button>
+              </div>
+            </div>
 
             {/* Shift Presets */}
             <div className="form-group">
@@ -421,6 +469,21 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
                 <div className="shift-preview-header" style={{ margin: 0 }}>
                   <Clock size={14} style={{ display: 'inline', marginRight: '4px' }} />
                   Calculated Shift Breakdown
+                  {shiftType === 'BANK' && (
+                    <span
+                      style={{
+                        marginLeft: '8px',
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        color: '#4338ca',
+                        background: '#e0e7ff',
+                        padding: '1px 6px',
+                        borderRadius: '4px',
+                      }}
+                    >
+                      Bank Shift
+                    </span>
+                  )}
                   {overrideBand && (
                     <span
                       style={{
@@ -442,6 +505,18 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
                   ~£{estimatedShiftEarnings.toFixed(2)} estimated
                 </div>
               </div>
+              {shiftType === 'BANK' && (
+                <div
+                  style={{
+                    fontSize: '0.75rem',
+                    color: 'var(--indigo)',
+                    marginBottom: '0.5rem',
+                    fontWeight: 600,
+                  }}
+                >
+                  ℹ️ Excluded from substantive 26h additional-hours calculation (paid as Bank Hourly Pay).
+                </div>
+              )}
               <div className="preview-pill-list">
                 <div className="preview-pill">
                   Total Paid: <strong>{breakdown.totalWorkedHours} hrs</strong>

@@ -33,8 +33,10 @@ interface AggregatedEnhancements {
   bhAmount: number;
   actingUpHours: number;
   actingUpAmount: number;
+  totalBankBasicHours: number;
   totalBankBasicPay: number;
 }
+
 
 interface OvertimeCalculationResult {
   additionalHours: number;
@@ -175,6 +177,7 @@ export class WageCalculatorService {
       bhAmount: 0,
       actingUpHours: 0,
       actingUpAmount: 0,
+      totalBankBasicHours: 0,
       totalBankBasicPay: 0,
     };
 
@@ -197,7 +200,10 @@ export class WageCalculatorService {
           ? GrossPayCalculator.getHourlyRateForBand(shift.overrideBand)
           : baseHourlyRate);
 
-      if (profile.contractType === 'BANK_HOURLY') {
+      const isBankShift = profile.contractType === 'BANK_HOURLY' || shift.shiftType === 'BANK';
+
+      if (isBankShift) {
+        agg.totalBankBasicHours += breakdown.totalWorkedHours;
         agg.totalBankBasicPay += breakdown.totalWorkedHours * shiftRate;
       } else if (shiftRate > baseHourlyRate) {
         const diff = shiftRate - baseHourlyRate;
@@ -324,14 +330,32 @@ export class WageCalculatorService {
         rate: baseRates.hourlyRate,
         amount: roundCurrency(enhancements.totalBankBasicPay),
       });
-    } else if (enhancements.actingUpAmount > 0) {
-      payLineItems.push({
-        description: 'Higher Band / Acting Up Allowance',
-        unitsWorked: roundHours(enhancements.actingUpHours),
-        paidUnits: roundHours(enhancements.actingUpHours),
-        rate: roundHourlyRate(enhancements.actingUpAmount / enhancements.actingUpHours),
-        amount: roundCurrency(enhancements.actingUpAmount),
-      });
+    } else {
+      // Substantive profile with bank shifts
+      if (enhancements.totalBankBasicPay > 0) {
+        const bankUnits = roundHours(enhancements.totalBankBasicHours);
+        const avgBankRate =
+          bankUnits > 0
+            ? roundHourlyRate(enhancements.totalBankBasicPay / bankUnits)
+            : baseRates.hourlyRate;
+        payLineItems.push({
+          description: 'Bank Hourly Pay',
+          unitsWorked: bankUnits,
+          paidUnits: bankUnits,
+          rate: avgBankRate,
+          amount: roundCurrency(enhancements.totalBankBasicPay),
+        });
+      }
+
+      if (enhancements.actingUpAmount > 0) {
+        payLineItems.push({
+          description: 'Higher Band / Acting Up Allowance',
+          unitsWorked: roundHours(enhancements.actingUpHours),
+          paidUnits: roundHours(enhancements.actingUpHours),
+          rate: roundHourlyRate(enhancements.actingUpAmount / enhancements.actingUpHours),
+          amount: roundCurrency(enhancements.actingUpAmount),
+        });
+      }
     }
 
     // Enhancements
@@ -424,6 +448,8 @@ export class WageCalculatorService {
    * - Additional hours: hours above contracted weekly hrs up to FTE threshold → plain time (1.0×)
    * - Overtime: hours above FTE threshold (Bands 1–7 only) → time-and-a-half (1.5×)
    * - Bands 8a–9: all excess hours paid at plain time; no 1.5× premium
+   *
+   * Note: Bank shifts are excluded from substantive weekly hours calculation.
    */
   private static calculateAdditionalAndOvertimePay(
     shifts: Shift[],
@@ -432,6 +458,9 @@ export class WageCalculatorService {
   ): OvertimeCalculationResult {
     const weekMap = new Map<string, number>();
     for (const shift of shifts) {
+      // Exclude bank shifts from substantive contracted hours calculation
+      if (shift.shiftType === 'BANK') continue;
+
       const breakdown = shift.breakdown || ShiftIntervalCalculator.calculateBreakdown(shift);
       const weekKey = getIsoWeekKey(shift.date);
       weekMap.set(weekKey, (weekMap.get(weekKey) ?? 0) + breakdown.totalWorkedHours);
@@ -471,3 +500,4 @@ export class WageCalculatorService {
     };
   }
 }
+
