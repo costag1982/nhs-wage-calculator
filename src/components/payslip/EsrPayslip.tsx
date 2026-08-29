@@ -91,7 +91,9 @@ export const EsrPayslip: React.FC<EsrPayslipProps> = ({ profile, summary }) => {
           <div className="esr-header-cell" style={{ borderTop: 'none', borderBottom: 'none' }}>
             <div className="cell-label">STANDARD HRS.</div>
             <div className="cell-value tabular-nums">
-              {profile.contractedWeeklyHours.toFixed(1)}
+              {Number.isInteger(profile.contractedWeeklyHours)
+                ? profile.contractedWeeklyHours.toFixed(1)
+                : profile.contractedWeeklyHours.toLocaleString('en-GB', { maximumFractionDigits: 2 })}
             </div>
           </div>
           <div className="esr-header-cell" style={{ borderTop: 'none', borderBottom: 'none' }}>
@@ -220,16 +222,23 @@ export const EsrPayslip: React.FC<EsrPayslipProps> = ({ profile, summary }) => {
               <div>
                 <span style={{ color: '#555' }}>GROSS PAY: </span>
                 <span className="tabular-nums font-bold">
-                  {formatCurrency(summary.grossPay * 4)}
+                  {formatCurrency(summary.grossPay * summary.taxPeriod)}
                 </span>
               </div>
               <div>
                 <span style={{ color: '#555' }}>TAXABLE PAY: </span>
-                <span className="tabular-nums">{formatCurrency(summary.taxablePay * 4)}</span>
+                <span className="tabular-nums">
+                  {formatCurrency(summary.taxablePay * summary.taxPeriod)}
+                </span>
               </div>
               <div>
                 <span style={{ color: '#555' }}>TAX PAID: </span>
-                <span className="tabular-nums">{formatCurrency(summary.grossPay * 0.15 * 4)}</span>
+                <span className="tabular-nums">
+                  {formatCurrency(
+                    (summary.deductionsList.find((d) => d.name === 'PAYE')?.amount ?? 0) *
+                      summary.taxPeriod
+                  )}
+                </span>
               </div>
               <div>
                 <span style={{ color: '#555' }}>NI LETTER: </span>
@@ -237,20 +246,32 @@ export const EsrPayslip: React.FC<EsrPayslipProps> = ({ profile, summary }) => {
               </div>
               <div>
                 <span style={{ color: '#555' }}>NI PAY: </span>
-                <span className="tabular-nums">{formatCurrency(summary.grossPay * 4)}</span>
+                <span className="tabular-nums">
+                  {formatCurrency(summary.grossPay * summary.taxPeriod)}
+                </span>
               </div>
               <div>
                 <span style={{ color: '#555' }}>NI CONTS: </span>
-                <span className="tabular-nums">{formatCurrency(summary.grossPay * 0.05 * 4)}</span>
+                <span className="tabular-nums">
+                  {formatCurrency(
+                    (summary.deductionsList.find((d) => d.name.startsWith('NI'))?.amount ?? 0) *
+                      summary.taxPeriod
+                  )}
+                </span>
               </div>
               <div>
                 <span style={{ color: '#555' }}>PENSIONABLE: </span>
-                <span className="tabular-nums">{formatCurrency(summary.pensionablePay * 4)}</span>
+                <span className="tabular-nums">
+                  {formatCurrency(summary.pensionablePay * summary.taxPeriod)}
+                </span>
               </div>
               <div>
                 <span style={{ color: '#555' }}>PENSION CONTS: </span>
                 <span className="tabular-nums">
-                  {formatCurrency(summary.grossPay * profile.pensionContributionRate * 4)}
+                  {formatCurrency(
+                    (summary.deductionsList.find((d) => d.name.includes('Pension'))?.amount ?? 0) *
+                      summary.taxPeriod
+                  )}
                 </span>
               </div>
             </div>

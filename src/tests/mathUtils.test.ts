@@ -4,6 +4,7 @@ import {
   roundHours,
   roundHourlyRate,
   roundToDecimals,
+  formatHours,
 } from '../domain/utils/mathUtils';
 
 describe('mathUtils', () => {
@@ -25,6 +26,18 @@ describe('mathUtils', () => {
     });
   });
 
+  describe('formatHours', () => {
+    it('formats hours accurately without rounding to whole integers', () => {
+      expect(formatHours(112.98)).toBe('112.98');
+      expect(formatHours(113)).toBe('113');
+      expect(formatHours(112.978)).toBe('112.98');
+      expect(formatHours(7.5)).toBe('7.5');
+      expect(formatHours(44.0)).toBe('44');
+      expect(formatHours(0)).toBe('0');
+      expect(formatHours(29.48)).toBe('29.48');
+    });
+  });
+
   describe('roundHourlyRate', () => {
     it('rounds hourly rate to 4 decimal places for NHS ESR standard', () => {
       // 25272 / (52.142857 * 37.5) = 12.92446...
@@ -41,3 +54,4 @@ describe('mathUtils', () => {
     });
   });
 });
+

@@ -1,5 +1,6 @@
 import React from 'react';
 import { PayslipSummary } from '../../domain/models/Payslip';
+import { formatHours } from '../../domain/utils/mathUtils';
 import { Banknote, Clock, ShieldAlert, Sparkles, Timer } from 'lucide-react';
 
 interface MetricCardsProps {
@@ -9,8 +10,6 @@ interface MetricCardsProps {
 export const MetricCards: React.FC<MetricCardsProps> = ({ summary }) => {
   const formatCurrency = (val: number) =>
     `£${val.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-  const formatHours = (val: number) => `${Math.round(val)}`;
 
   const workedHours = summary.hoursBreakdown.totalWorkedHours;
   const contractedHours = summary.monthlyBasicHours;
@@ -57,12 +56,14 @@ export const MetricCards: React.FC<MetricCardsProps> = ({ summary }) => {
           +{formatCurrency(summary.enhancementsTotal)}
         </div>
         <div className="metric-subtitle">
-          {summary.hoursBreakdown.nightHours > 0 && `Night: ${summary.hoursBreakdown.nightHours}h `}
+          {summary.hoursBreakdown.nightHours > 0 &&
+            `Night: ${formatHours(summary.hoursBreakdown.nightHours)}h `}
           {summary.hoursBreakdown.saturdayHours > 0 &&
-            `Sat: ${summary.hoursBreakdown.saturdayHours}h `}
-          {summary.hoursBreakdown.sundayHours > 0 && `Sun: ${summary.hoursBreakdown.sundayHours}h `}
+            `Sat: ${formatHours(summary.hoursBreakdown.saturdayHours)}h `}
+          {summary.hoursBreakdown.sundayHours > 0 &&
+            `Sun: ${formatHours(summary.hoursBreakdown.sundayHours)}h `}
           {summary.hoursBreakdown.bankHolidayHours > 0 &&
-            `BH: ${summary.hoursBreakdown.bankHolidayHours}h `}
+            `BH: ${formatHours(summary.hoursBreakdown.bankHolidayHours)}h `}
           {summary.enhancementsTotal === 0 && 'No unsocial hours this month'}
         </div>
       </div>

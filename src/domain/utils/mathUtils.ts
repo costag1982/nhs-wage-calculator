@@ -32,3 +32,12 @@ export function roundHours(val: number): number {
 export function roundHourlyRate(val: number): number {
   return roundToDecimals(val, 4);
 }
+
+/**
+ * Formats hours to display accurately without unwanted integer rounding.
+ * Retains exact decimal precision up to 2 decimal places (e.g. 112.98, 7.5, 44).
+ */
+export function formatHours(val: number): string {
+  const rounded = roundHours(val);
+  return parseFloat(rounded.toFixed(2)).toString();
+}

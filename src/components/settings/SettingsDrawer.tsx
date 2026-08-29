@@ -151,7 +151,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                   <input
                     type="number"
                     className="form-input"
-                    step="0.5"
+                    step="0.25"
                     value={profile.contractedWeeklyHours}
                     onChange={(e) =>
                       onUpdateProfile({ contractedWeeklyHours: parseFloat(e.target.value) || 0 })
@@ -164,7 +164,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                   <input
                     type="number"
                     className="form-input"
-                    step="0.5"
+                    step="0.25"
                     value={profile.standardFullTimeHours}
                     onChange={(e) =>
                       onUpdateProfile({ standardFullTimeHours: parseFloat(e.target.value) || 0 })
