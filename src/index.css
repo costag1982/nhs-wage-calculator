@@ -1,0 +1,1118 @@
+:root {
+  /* NHS Brand Colors & Modern Theme Tokens */
+  --nhs-blue: #005eb8;
+  --nhs-blue-hover: #004b93;
+  --nhs-blue-light: #e8f3fb;
+  --nhs-dark-blue: #002f5c;
+
+  --primary: #005eb8;
+  --primary-hover: #004b93;
+  --primary-foreground: #ffffff;
+
+  --emerald: #059669;
+  --emerald-light: #ecfdf5;
+  --emerald-border: #a7f3d0;
+
+  --amber: #d97706;
+  --amber-light: #fffbeb;
+  --amber-border: #fde68a;
+
+  --indigo: #4f46e5;
+  --indigo-light: #eef2ff;
+  --indigo-border: #c7d2fe;
+
+  --rose: #e11d48;
+  --rose-light: #fff1f2;
+  --rose-border: #fecdd3;
+
+  /* Neutral Surface Palette */
+  --bg-app: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-card-subtle: #f1f5f9;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --text-subtle: #94a3b8;
+
+  --border-light: #e2e8f0;
+  --border-medium: #cbd5e1;
+  --border-focus: #005eb8;
+
+  /* Shadows & Radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.03);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-heading: 'Outfit', var(--font-sans);
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--bg-app);
+  color: var(--text-main);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+/* Layout Utilities */
+.app-container {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 3rem 1.25rem;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* App Header */
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  background: #ffffff;
+  padding: 1rem 1.5rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 1.5rem;
+}
+
+.brand-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.nhs-logo-badge {
+  background: var(--nhs-blue);
+  color: #ffffff;
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 1.25rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: var(--radius-sm);
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.brand-titles h1 {
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.brand-titles p {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+/* Primary and Secondary Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.55rem 1.1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  transition: all 0.15s ease-in-out;
+  text-decoration: none;
+}
+
+.btn-primary {
+  background-color: var(--nhs-blue);
+  color: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 94, 184, 0.25);
+}
+
+.btn-primary:hover {
+  background-color: var(--nhs-blue-hover);
+  box-shadow: 0 4px 6px rgba(0, 94, 184, 0.35);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background-color: #ffffff;
+  color: var(--text-main);
+  border: 1px solid var(--border-medium);
+}
+
+.btn-secondary:hover {
+  background-color: var(--bg-card-subtle);
+  border-color: var(--text-muted);
+}
+
+.btn-outline {
+  background-color: transparent;
+  color: var(--nhs-blue);
+  border: 1px solid var(--nhs-blue);
+}
+
+.btn-outline:hover {
+  background-color: var(--nhs-blue-light);
+}
+
+.btn-danger {
+  background-color: #ffffff;
+  color: var(--rose);
+  border: 1px solid var(--rose-border);
+}
+
+.btn-danger:hover {
+  background-color: var(--rose-light);
+}
+
+/* Metric Cards Grid */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+}
+
+.metric-card {
+  background: #ffffff;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.5rem;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.metric-card.highlight-net {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  color: #ffffff;
+  border: none;
+  box-shadow: 0 10px 20px -3px rgba(5, 150, 105, 0.3);
+}
+
+.metric-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.metric-title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.metric-card.highlight-net .metric-title {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.metric-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-card-subtle);
+  color: var(--text-main);
+}
+
+.metric-card.highlight-net .metric-icon {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+.metric-value {
+  font-family: var(--font-heading);
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 0.25rem;
+}
+
+.metric-card.highlight-net .metric-value {
+  color: #ffffff;
+  font-size: 2rem;
+}
+
+.metric-subtitle {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.metric-card.highlight-net .metric-subtitle {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* Hours Worked card */
+.hours-fraction {
+  display: flex;
+  align-items: baseline;
+  gap: 0.2rem;
+}
+
+.hours-fraction-divider {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.hours-progress-bar {
+  width: 100%;
+  height: 5px;
+  background: var(--border-light);
+  border-radius: 999px;
+  overflow: hidden;
+  margin: 0.6rem 0 0.4rem;
+}
+
+.hours-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+/* Dashboard Navigation Tabs */
+.view-tabs-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.view-tabs {
+  display: inline-flex;
+  background: #e2e8f0;
+  padding: 0.25rem;
+  border-radius: var(--radius-md);
+  gap: 0.25rem;
+}
+
+.tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  transition: all 0.15s ease;
+}
+
+.tab-btn.active {
+  background: #ffffff;
+  color: var(--nhs-blue);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Month Navigation Bar */
+.month-nav-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: #ffffff;
+  padding: 0.35rem 0.65rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-light);
+}
+
+.month-title-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 145px;
+}
+
+.month-title {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.95rem;
+  line-height: 1.2;
+  text-align: center;
+  color: var(--text-main);
+}
+
+.month-pay-badge {
+  display: inline-block;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--nhs-blue);
+  background: var(--nhs-blue-light);
+  padding: 1px 7px;
+  border-radius: 9999px;
+  margin-top: 3px;
+  letter-spacing: 0.01em;
+  line-height: 1.3;
+}
+
+.nav-arrow-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  color: var(--text-main);
+  transition: background 0.15s ease;
+}
+
+.nav-arrow-btn:hover {
+  background: var(--bg-card-subtle);
+}
+
+/* Calendar Grid */
+.calendar-card {
+  background: #ffffff;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.calendar-weekdays-header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  background: var(--bg-card-subtle);
+  border-bottom: 1px solid var(--border-light);
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.75rem 0;
+}
+
+.calendar-days-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  background: var(--border-light);
+  gap: 1px;
+}
+
+.calendar-day-cell {
+  background: #ffffff;
+  min-height: 125px;
+  padding: 0.6rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: background 0.15s ease;
+  position: relative;
+  cursor: pointer;
+}
+
+.calendar-day-cell:hover {
+  background: #f8fafc;
+}
+
+.calendar-day-cell.other-month {
+  background: #fbfcfe;
+  opacity: 0.45;
+}
+
+.calendar-day-cell.is-today {
+  background: #f0f7ff;
+}
+
+.calendar-day-cell.is-today .day-number {
+  background: var(--nhs-blue);
+  color: #ffffff;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.calendar-day-cell.is-weekend {
+  background: #fafafc;
+}
+
+.day-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.25rem;
+  margin-bottom: 0.4rem;
+}
+
+.day-number {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-main);
+  flex-shrink: 0;
+}
+
+.bank-holiday-tag {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  background: #fef2f2;
+  color: var(--rose);
+  border: 1px solid var(--rose-border);
+  padding: 0.15rem 0.4rem;
+  border-radius: var(--radius-sm);
+  white-space: normal;
+  line-height: 1.2;
+  text-align: right;
+  word-break: normal;
+}
+
+/* Shift Badges in Day Cell */
+.shift-badge-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.shift-pill {
+  padding: 0.35rem 0.5rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  transition: transform 0.1s ease;
+  border-left: 3px solid;
+}
+
+.shift-pill:hover {
+  transform: scale(1.02);
+}
+
+.shift-pill-night {
+  background: #f5f3ff;
+  border-color: #7c3aed;
+  color: #5b21b6;
+}
+
+.shift-pill-day {
+  background: #eff6ff;
+  border-color: var(--nhs-blue);
+  color: var(--nhs-dark-blue);
+}
+
+.shift-pill-weekend {
+  background: #fff1f2;
+  border-color: var(--rose);
+  color: #9f1239;
+}
+
+.shift-pill-holiday {
+  background: #fefce8;
+  border-color: var(--amber);
+  color: #92400e;
+}
+
+.shift-pill-title {
+  font-weight: 700;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.shift-pill-time {
+  font-size: 0.7rem;
+  opacity: 0.85;
+}
+
+.shift-pill-tags {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+  margin-top: 0.1rem;
+}
+
+.enhancement-micro-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.05rem 0.25rem;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.add-shift-btn-ghost {
+  opacity: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: var(--nhs-blue);
+  font-weight: 600;
+  gap: 0.25rem;
+  padding: 0.35rem;
+  border-radius: var(--radius-sm);
+  background: var(--nhs-blue-light);
+  transition: opacity 0.15s ease;
+  margin-top: auto;
+}
+
+.calendar-day-cell:hover .add-shift-btn-ghost {
+  opacity: 1;
+}
+
+/* Modal Overlay & Dialog */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.modal-dialog {
+  background: #ffffff;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  width: 100%;
+  max-width: 540px;
+  max-height: 90vh;
+  overflow-y: auto;
+  border: 1px solid var(--border-light);
+  animation: modalIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.modal-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border-light);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-title {
+  font-family: var(--font-heading);
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.modal-body {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.modal-footer {
+  padding: 1.25rem 1.5rem;
+  border-top: 1px solid var(--border-light);
+  background: var(--bg-app);
+  border-bottom-left-radius: var(--radius-xl);
+  border-bottom-right-radius: var(--radius-xl);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Shift Presets Grid */
+.preset-buttons-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+}
+
+.preset-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.65rem 0.5rem;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-align: center;
+  gap: 0.2rem;
+  background: #ffffff;
+  transition: all 0.15s ease;
+}
+
+.preset-btn:hover {
+  background: var(--bg-card-subtle);
+  border-color: var(--nhs-blue);
+}
+
+.preset-btn.active {
+  background: var(--nhs-blue-light);
+  border-color: var(--nhs-blue);
+  color: var(--nhs-blue);
+}
+
+.preset-btn-time {
+  font-size: 0.7rem;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+/* Form Controls */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.form-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.form-input,
+.form-select {
+  padding: 0.625rem 0.875rem;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  background: #ffffff;
+  color: var(--text-main);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.form-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 16px 16px;
+  padding-right: 2.35rem;
+  cursor: pointer;
+}
+
+.form-select:hover {
+  border-color: #94a3b8;
+}
+
+.form-input:focus,
+.form-select:focus {
+  outline: none;
+  border-color: var(--nhs-blue);
+  box-shadow: 0 0 0 3px rgba(0, 94, 184, 0.15);
+}
+
+.form-select:focus {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23005eb8' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+
+input[type='time']::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.15s ease;
+}
+
+input[type='time']::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+/* Shift Breakdown Preview Inside Modal */
+.shift-preview-box {
+  background: var(--bg-app);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+}
+
+.shift-preview-header {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+  margin-bottom: 0.75rem;
+}
+
+.preview-pill-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.preview-pill {
+  font-size: 0.8125rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+  border: 1px solid var(--border-medium);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.preview-pill strong {
+  color: var(--text-main);
+}
+
+/* =========================================================
+   AUTHENTIC NHS ESR DIGITAL PAYSLIP STYLES
+   Replicating the exact layout of the NHS paper wage slip
+   ========================================================= */
+.esr-payslip-wrapper {
+  background: #ffffff;
+  border: 2px solid #000000;
+  color: #000000;
+  font-family: Arial, Helvetica, sans-serif;
+  padding: 1.5rem;
+  max-width: 960px;
+  margin: 0 auto;
+  box-shadow: var(--shadow-lg);
+}
+
+.esr-header-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr 1.6fr;
+  border: 1px solid #000000;
+  margin-bottom: -1px;
+}
+
+.esr-header-cell {
+  border: 1px solid #000000;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.75rem;
+}
+
+.esr-header-cell .cell-label {
+  font-size: 0.625rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  color: #444444;
+  margin-bottom: 0.15rem;
+}
+
+.esr-header-cell .cell-value {
+  font-size: 0.8125rem;
+  font-weight: bold;
+}
+
+.esr-logo-box {
+  background: #005eb8;
+  color: #ffffff;
+  font-size: 1.75rem;
+  font-weight: 900;
+  font-family: Arial, sans-serif;
+  letter-spacing: -0.05em;
+  padding: 0.5rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Pay and Deductions 2-Column Section */
+.esr-columns-container {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  border: 1px solid #000000;
+  min-height: 380px;
+}
+
+.esr-column-left {
+  border-right: 1px solid #000000;
+  display: flex;
+  flex-direction: column;
+}
+
+.esr-column-right {
+  display: flex;
+  flex-direction: column;
+}
+
+.esr-table-header {
+  background: #f0f0f0;
+  border-bottom: 1px solid #000000;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.esr-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+}
+
+.esr-table th {
+  font-size: 0.625rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  border-bottom: 1px solid #000000;
+  padding: 0.25rem 0.4rem;
+  background: #f9f9f9;
+}
+
+.esr-table td {
+  padding: 0.3rem 0.4rem;
+  vertical-align: top;
+}
+
+.text-left {
+  text-align: left;
+}
+.text-center {
+  text-align: center;
+}
+.text-right {
+  text-align: right;
+}
+
+/* Period Summary & Net Pay Section */
+.esr-summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border: 1px solid #000000;
+  border-top: none;
+}
+
+.esr-ytd-box {
+  border-right: 1px solid #000000;
+  padding: 0.5rem;
+  font-size: 0.75rem;
+}
+
+.esr-period-summary-box {
+  padding: 0.5rem;
+  font-size: 0.75rem;
+}
+
+.esr-net-pay-banner {
+  background: #ffffff;
+  border: 2px solid #000000;
+  padding: 0.6rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.5rem;
+}
+
+.esr-net-pay-title {
+  font-size: 1.1rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+}
+
+.esr-net-pay-val {
+  font-size: 1.4rem;
+  font-weight: 900;
+}
+
+/* Roster Summary Table */
+.roster-table-card {
+  background: #ffffff;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.roster-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.roster-table th {
+  background: var(--bg-card-subtle);
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.roster-table td {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--border-light);
+  color: var(--text-main);
+}
+
+.roster-table tr:hover td {
+  background: #f8fafc;
+}
+
+/* Settings Drawer */
+.drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.drawer-panel {
+  background: #ffffff;
+  width: 100%;
+  max-width: 520px;
+  height: 100%;
+  box-shadow: var(--shadow-xl);
+  display: flex;
+  flex-direction: column;
+  animation: drawerSlide 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes drawerSlide {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.drawer-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border-light);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.drawer-body {
+  padding: 1.5rem;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.settings-section-title {
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-main);
+  border-bottom: 1px solid var(--border-light);
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+/* Print Styling */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  .app-header,
+  .metrics-grid,
+  .view-tabs-container,
+  .btn,
+  .add-shift-btn-ghost,
+  .settings-btn {
+    display: none !important;
+  }
+  .esr-payslip-wrapper {
+    box-shadow: none !important;
+    border: 2px solid #000000 !important;
+    margin: 0 auto !important;
+    width: 100% !important;
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .calendar-weekdays-header {
+    font-size: 0.7rem;
+  }
+  .calendar-day-cell {
+    min-height: 85px;
+    padding: 0.35rem;
+  }
+  .day-number {
+    font-size: 0.75rem;
+  }
+  .esr-columns-container {
+    grid-template-columns: 1fr;
+  }
+  .esr-column-left {
+    border-right: none;
+    border-bottom: 1px solid #000000;
+  }
+  .preset-buttons-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
