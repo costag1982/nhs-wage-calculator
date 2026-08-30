@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NHS Wage & Shift Calculator — Data & Sync Flow Architecture</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: rgba(17, 24, 39, 0.85);
+      --card-border: rgba(255, 255, 255, 0.1);
+      --nhs-blue: #005eb8;
+      --nhs-blue-light: #38bdf8;
+      --emerald: #10b981;
+      --emerald-bg: rgba(16, 185, 129, 0.12);
+      --amber: #f59e0b;
+      --purple: #a855f7;
+      --rose: #f43f5e;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background-color: var(--bg);
+      background-image: 
+        radial-gradient(circle at 15% 15%, rgba(0, 94, 184, 0.15) 0%, transparent 40%),
+        radial-gradient(circle at 85% 85%, rgba(168, 85, 247, 0.12) 0%, transparent 40%),
+        radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.08) 0%, transparent 50%);
+      color: var(--text);
+      padding: 3rem 2rem;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 3.5rem;
+    }
+
+    header {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .badge-header {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0.9rem;
+      background: rgba(0, 94, 184, 0.25);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      border-radius: 9999px;
+      color: #38bdf8;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 2.5rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    p.lead {
+      color: var(--text-muted);
+      font-size: 1.1rem;
+      max-width: 780px;
+      line-height: 1.6;
+    }
+
+    /* Section Cards */
+    .flow-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 2.25rem;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      display: flex;
+      flex-direction: column;
+      gap: 1.75rem;
+    }
+
+    .flow-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 1.25rem;
+    }
+
+    .flow-title-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .flow-number {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--nhs-blue) 0%, #003087 100%);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1.1rem;
+      box-shadow: 0 4px 12px rgba(0, 94, 184, 0.4);
+    }
+
+    .flow-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .flow-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.35rem 0.8rem;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .badge-blue { background: rgba(0, 94, 184, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
+    .badge-green { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.3); }
+    .badge-purple { background: rgba(168, 85, 247, 0.2); color: #c084fc; border: 1px solid rgba(192, 132, 252, 0.3); }
+    .badge-amber { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3); }
+
+    /* Flow Steps Grid */
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.25rem;
+      position: relative;
+    }
+
+    .step-card {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 1.4rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      position: relative;
+      transition: all 0.2s ease;
+    }
+
+    .step-card:hover {
+      border-color: rgba(56, 189, 248, 0.4);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    }
+
+    .step-badge {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .step-pill {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 0.2rem 0.55rem;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.06);
+      color: #94a3b8;
+    }
+
+    .step-icon {
+      font-size: 1.3rem;
+    }
+
+    .step-name {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .step-desc {
+      font-size: 0.83rem;
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+
+    .step-code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      background: #020617;
+      padding: 0.5rem 0.65rem;
+      border-radius: 6px;
+      color: #38bdf8;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      word-break: break-all;
+    }
+
+    /* Master Architecture Diagram Box */
+    .arch-diagram {
+      background: radial-gradient(circle at 50% 50%, #0f172a 0%, #020617 100%);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    .layer-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .node-box {
+      flex: 1;
+      min-width: 260px;
+      background: rgba(30, 41, 59, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      position: relative;
+    }
+
+    .node-box.highlight-blue {
+      border-color: rgba(56, 189, 248, 0.5);
+      background: linear-gradient(135deg, rgba(0, 94, 184, 0.25) 0%, rgba(15, 23, 42, 0.8) 100%);
+    }
+
+    .node-box.highlight-green {
+      border-color: rgba(16, 185, 129, 0.5);
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(15, 23, 42, 0.8) 100%);
+    }
+
+    .node-box.highlight-purple {
+      border-color: rgba(168, 85, 247, 0.5);
+      background: linear-gradient(135deg, rgba(168, 85, 247, 0.2) 0%, rgba(15, 23, 42, 0.8) 100%);
+    }
+
+    .node-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .node-subtitle {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    .arrow-connector {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #38bdf8;
+      font-weight: 700;
+      font-size: 1.2rem;
+    }
+
+    .footer-note {
+      text-align: center;
+      font-size: 0.85rem;
+      color: #64748b;
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Main Header -->
+    <header>
+      <div class="badge-header">NHS Wage & Shift Calculator — Architecture</div>
+      <h1>Complete Data Input & Cloud Sync Flow</h1>
+      <p class="lead">
+        A visual technical walkthrough of how Gemma's shifts, contract settings, and deductions are input, calculated, stored locally in SQLite, and synchronised across all devices using private GitHub Gists.
+      </p>
+    </header>
+
+    <!-- SECTION 1: MASTER SYSTEM ARCHITECTURE -->
+    <section class="flow-card">
+      <div class="flow-header">
+        <div class="flow-title-wrapper">
+          <div class="flow-number">★</div>
+          <div class="flow-title">Master System Architecture & Data Topology</div>
+        </div>
+        <span class="flow-badge badge-blue">Hybrid Architecture</span>
+      </div>
+
+      <div class="arch-diagram">
+        <!-- Layer 1: Client UI -->
+        <div class="layer-row">
+          <div class="node-box highlight-blue">
+            <div class="node-title">📱 Gemma's Device (Mobile / Safari)</div>
+            <div class="node-subtitle">React 19 View Layer • Instant Section 2 Wage Calculations • UI Event Triggers</div>
+          </div>
+          <div class="arrow-connector">⇄</div>
+          <div class="node-box highlight-blue">
+            <div class="node-title">💻 Gemma's Laptop / Desktop</div>
+            <div class="node-subtitle">Synchronised UI State • Auto-Reload on Tab Focus • Popstate Navigation</div>
+          </div>
+        </div>
+
+        <div class="arrow-connector" style="justify-content: center;">↓ (Local Persistence & Queries) ↓</div>
+
+        <!-- Layer 2: In-Browser Storage Engine -->
+        <div class="layer-row">
+          <div class="node-box highlight-green">
+            <div class="node-title">⚡ In-Memory SQLite Wasm (sql.js)</div>
+            <div class="node-subtitle">Microsecond queries, SQL relational schema, Agenda for Change calculations</div>
+            <div class="step-code">SELECT * FROM shifts WHERE date LIKE '2026-06%'</div>
+          </div>
+          <div class="arrow-connector">⇄</div>
+          <div class="node-box highlight-green">
+            <div class="node-title">💾 IndexedDB Binary Store</div>
+            <div class="node-subtitle">Stores full serialized SQLite database binary (.sqlite) in browser disk</div>
+            <div class="step-code">nhscalc_sqlite_db -> sqlite_store (Binary Blob)</div>
+          </div>
+        </div>
+
+        <div class="arrow-connector" style="justify-content: center;">↓ (Debounced Background Synchronization) ↓</div>
+
+        <!-- Layer 3: Cloud Sync & GitHub Actions -->
+        <div class="layer-row">
+          <div class="node-box highlight-purple">
+            <div class="node-title">☁️ Private GitHub Gist (#2044d61dccd6...)</div>
+            <div class="node-subtitle">Encrypted Cloud Data Store • Permanent Git Revisions • REST API endpoint</div>
+            <div class="step-code">nhs-wage-calculator-data.json (AES-256 protected)</div>
+          </div>
+          <div class="arrow-connector">⇄</div>
+          <div class="node-box highlight-purple">
+            <div class="node-title">🛡️ GitHub Actions Pipeline</div>
+            <div class="node-subtitle">Builds, lints, tests, encrypts bundle with AES-256-GCM, and deploys to Pages</div>
+            <div class="step-code">PAGE_PASSWORD + SYNC_GIST_TOKEN (Repository Secrets)</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 2: FLOW 1 - USER MANUAL INPUT & REAL-TIME SAVE -->
+    <section class="flow-card">
+      <div class="flow-header">
+        <div class="flow-title-wrapper">
+          <div class="flow-number">1</div>
+          <div class="flow-title">Flow 1: User Adds / Edits a Shift on Mobile or Laptop</div>
+        </div>
+        <span class="flow-badge badge-green">Write Flow</span>
+      </div>
+
+      <div class="steps-grid">
+        <div class="step-card">
+          <div class="step-badge">
+            <span class="step-pill">Step 1</span>
+            <span class="step-icon">✍️</span>
+          </div>
+          <div class="step-name">User Enters Shift</div>
+          <div class="step-desc">Gemma taps a date on the calendar, selects Night Shift (20:00–06:00), and taps "Save Shift".</div>
+        </div>
+
+        <div class="step-card">
+          <div class="step-badge">
+            <span class="step-pill">Step 2</span>
+            <span class="step-icon">⚡</span>
+          </div>
+          <div class="step-name">Section 2 Wage Recalc</div>
+          <div class="step-desc">Calculates Saturday (41%), Sunday (83%), Night enhancements, PAYE, and pension in &lt;1ms.</div>
+        </div>
+
+        <div class="step-card">
+          <div class="step-badge">
+            <span class="step-pill">Step 3</span>
+            <span class="step-icon">💾</span>
+          </div>
+          <div class="step-name">SQLite & IndexedDB Save</div>
+          <div class="step-desc">Commits SQL row: <code>INSERT INTO shifts</code> and writes binary snapshot to IndexedDB.</div>
+        </div>
+
+        <div class="step-card">
+          <div class="step-badge">
+            <span class="step-pill">Step 4</span>
+            <span class="step-icon">⏱️</span>
+          </div>
+          <div class="step-name">Debounced Auto-Sync</div>
+          <div class="step-desc">Sets <code>lastModified</code> timestamp and waits 1.5s to batch any rapid subsequent edits.</div>
+        </div>
+
+        <div class="step-card">
+          <div class="step-badge">
+            <span class="step-pill">Step 5</span>
+            <span class="step-icon">☁️</span>
+          </div>
+          <div class="step-name">Gist Patch Upload</div>
+          <div class="step-desc">Sends <code>PATCH /gists/:id</code> to GitHub. Header badge updates to <code>🟢 Cloud Synced</code>.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 3: FLOW 2 - MULTI-DEVICE HYDRATION -->
+    <section class="flow-card">
+      <div class="flow-header">
+        <div class="flow-title-wrapper">
+          <div class="flow-number">2</div>
+          <div class="flow-title">Flow 2: Gemma Opens App on Another Device (iPad / Mac)</div>
+        </div>
+        <span class="flow-badge badge-blue">Read & Merge Flow</span>
+      </div>
+
+      <div class="steps-grid">
+        <div class="step-card">
+          <div class="step-badge">
+            <span class="step-pill">Step 1</span>
+            <span class="step-icon">🔑</span>
+          </div>
+          <div class="step-name">App Passphrase Unlock</div>
+          <div class="step-desc">Gemma enters passphrase on new device. Web Crypto API decrypts React application in memory.</div>
+        </div>
+
+        <div class="step-card">
+          <div class="step-badge">
+            <span class="step-pill">Step 2</span>
+            <span class="step-icon">🔍</span>
+          </div>
+          <div class="step-name">Cloud Sync Check</div>
+          <div class="step-desc"><code>CloudSyncService</code> queries GitHub Gist for latest <code>lastModified</code> timestamp.</div>
+        </div>
+
+        <div class="step-card">
+          <div class="step-badge">
+            <span class="step-pill">Step 3</span>
+            <span class="step-icon">📥</span>
+          </div>
+          <div class="step-name">Remote Newer Detected</div>
+          <div class="step-desc">Remote timestamp is newer than empty/local database. Downloads full JSON payload.</div>
+        </div>
+
+        <div class="step-card">
+          <div class="step-badge">
+            <span class="step-pill">Step 4</span>
+            <span class="step-icon">🔄</span>
+          </div>
+          <div class="step-name">SQLite DB Hydration</div>
+          <div class="step-desc">Replaces local tables with remote shifts, employee profile, and recurring deductions.</div>
+        </div>
+
+        <div class="step-card">
+          <div class="step-badge">
+            <span class="step-pill">Step 5</span>
+            <span class="step-icon">✨</span>
+          </div>
+          <div class="step-name">UI Instantly Refreshes</div>
+          <div class="step-desc">Calendar, shifts list, and digital ESR payslip render with all synced shifts immediately.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 4: FLOW 3 - OFFLINE RESILIENCE -->
+    <section class="flow-card">
+      <div class="flow-header">
+        <div class="flow-title-wrapper">
+          <div class="flow-number">3</div>
+          <div class="flow-title">Flow 3: Offline Usage (In Hospital Ward / No Signal)</div>
+        </div>
+        <span class="flow-badge badge-amber">Offline Resilience Flow</span>
+      </div>
+
+      <div class="steps-grid">
+        <div class="step-card">
+          <div class="step-badge">
+            <span class="step-pill">Step 1</span>
+            <span class="step-icon">📡❌</span>
+          </div>
+          <div class="step-name">No Internet Detected</div>
+          <div class="step-desc">Gemma works in hospital with no Wi-Fi. Browser detects <code>navigator.onLine = false</code>.</div>
+        </div>
+
+        <div class="step-card">
+          <div class="step-badge">
+            <span class="step-pill">Step 2</span>
+            <span class="step-icon">⚡</span>
+          </div>
+          <div class="step-name">100% Offline Functionality</div>
+          <div class="step-desc">Full calculator, roster, and salary forecasts continue running locally in SQLite with zero lag.</div>
+        </div>
+
+        <div class="step-card">
+          <div class="step-badge">
+            <span class="step-pill">Step 3</span>
+            <span class="step-icon">⚪</span>
+          </div>
+          <div class="step-name">Offline Mode Badge</div>
+          <div class="step-desc">Header badge displays <code>⚪ Offline Mode (Saved locally)</code> so Gemma knows data is safe.</div>
+        </div>
+
+        <div class="step-card">
+          <div class="step-badge">
+            <span class="step-pill">Step 4</span>
+            <span class="step-icon">📶</span>
+          </div>
+          <div class="step-name">Signal Restored</div>
+          <div class="step-desc">Device reconnects to 4G/Wi-Fi. <code>window.online</code> and visibility events fire automatically.</div>
+        </div>
+
+        <div class="step-card">
+          <div class="step-badge">
+            <span class="step-pill">Step 5</span>
+            <span class="step-icon">☁️✅</span>
+          </div>
+          <div class="step-name">Automatic Background Sync</div>
+          <div class="step-desc">Sync engine pushes pending local mutations to GitHub Gist. Status returns to <code>🟢 Cloud Synced</code>.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 5: FLOW 4 - MANUAL SQLITE BACKUP & RESTORE -->
+    <section class="flow-card">
+      <div class="flow-header">
+        <div class="flow-title-wrapper">
+          <div class="flow-number">4</div>
+          <div class="flow-title">Flow 4: Manual .sqlite File Export & Import</div>
+        </div>
+        <span class="flow-badge badge-purple">File Backup Flow</span>
+      </div>
+
+      <div class="steps-grid">
+        <div class="step-card">
+          <div class="step-badge">
+            <span class="step-pill">Export</span>
+            <span class="step-icon">📤</span>
+          </div>
+          <div class="step-name">Export .sqlite File</div>
+          <div class="step-desc">Tapping "Export .sqlite DB" in Settings exports the raw binary database to <code>nhs_roster_database.sqlite</code>.</div>
+        </div>
+
+        <div class="step-card">
+          <div class="step-badge">
+            <span class="step-pill">Import</span>
+            <span class="step-icon">📥</span>
+          </div>
+          <div class="step-name">Import .sqlite File</div>
+          <div class="step-desc">Selecting any previous <code>.sqlite</code> backup file rehydrates the database and IndexedDB immediately.</div>
+        </div>
+
+        <div class="step-card">
+          <div class="step-badge">
+            <span class="step-pill">Cloud Update</span>
+            <span class="step-icon">☁️</span>
+          </div>
+          <div class="step-name">Auto Cloud Upload</div>
+          <div class="step-desc">Importing a file triggers <code>scheduleAutoSync()</code>, immediately updating the Cloud Gist with the restored data.</div>
+        </div>
+      </div>
+    </section>
+
+    <div class="footer-note">
+      NHS Wage & Shift Calculator • Built with React 19, TypeScript, SQLite Wasm, and GitHub Gist Cloud Sync
+    </div>
+  </div>
+
+</body>
+</html>
