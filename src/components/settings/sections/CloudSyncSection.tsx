@@ -1,5 +1,11 @@
 import React, { useState } from 'react';
-import { CloudSyncService, SyncStatus } from '../../../domain/services/CloudSyncService';
+import {
+  SyncStatus,
+  getSyncConfig,
+  saveSyncConfig,
+  testSyncConnection,
+  isManagedSyncConfig,
+} from '../../../domain/services/cloudSyncService';
 import { Cloud, RefreshCw, Lock, Key } from 'lucide-react';
 
 interface CloudSyncSectionProps {
@@ -13,7 +19,7 @@ export const CloudSyncSection: React.FC<CloudSyncSectionProps> = ({
   lastSyncedAt = null,
   onTriggerSync,
 }) => {
-  const initialConfig = CloudSyncService.getConfig();
+  const initialConfig = getSyncConfig();
   const [syncToken, setSyncToken] = useState(initialConfig.token);
   const [syncGistId, setSyncGistId] = useState(initialConfig.gistId);
   const [isConfigOpen, setIsConfigOpen] = useState(!initialConfig.token);
@@ -25,17 +31,17 @@ export const CloudSyncSection: React.FC<CloudSyncSectionProps> = ({
   const handleTestAndSave = async () => {
     setIsTesting(true);
     setTestResult(null);
-    const res = await CloudSyncService.testConnection(syncToken, syncGistId);
+    const res = await testSyncConnection(syncToken, syncGistId);
     setIsTesting(false);
     setTestResult(res);
     if (res.success) {
-      CloudSyncService.saveConfig(syncToken, syncGistId);
+      saveSyncConfig(syncToken, syncGistId);
       onTriggerSync?.();
     }
   };
 
   const handleDisconnect = () => {
-    CloudSyncService.saveConfig('', '');
+    saveSyncConfig('', '');
     setSyncToken('');
     setSyncGistId('');
     setTestResult({
@@ -98,7 +104,7 @@ export const CloudSyncSection: React.FC<CloudSyncSectionProps> = ({
           lose data across browsers or mobile devices.
         </p>
 
-        {CloudSyncService.isManagedConfig() ? (
+        {isManagedSyncConfig() ? (
           <div
             style={{
               display: 'flex',

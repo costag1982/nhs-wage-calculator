@@ -1,5 +1,5 @@
 import React from 'react';
-import { SyncStatus } from '../../domain/services/CloudSyncService';
+import { SyncStatus } from '../../domain/services/cloudSyncService';
 import { Cloud, CloudCheck, CloudOff, RefreshCw, AlertCircle } from 'lucide-react';
 
 interface SyncBadgeProps {

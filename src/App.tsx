@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useContractSettings } from './hooks/useContractSettings';
 import { useRoster } from './hooks/useRoster';
-import { WageCalculatorService } from './domain/services/WageCalculatorService';
+import { calculateMonthlyPayslip } from './domain/services/wageCalculatorService';
 import { MetricCards } from './components/dashboard/MetricCards';
 import { CalendarView } from './components/calendar/CalendarView';
 import { ShiftListView } from './components/dashboard/ShiftListView';
@@ -28,7 +28,7 @@ type TabView = 'CALENDAR' | 'LIST' | 'PAYSLIP';
 const STORAGE_KEY_ACTIVE_MONTH = 'nhs_active_month';
 const STORAGE_KEY_ACTIVE_TAB = 'nhs_active_tab';
 
-function getInitialActiveMonth(): Date {
+const getInitialActiveMonth = (): Date => {
   // 1. Check URL Query Parameters e.g. ?month=2026-08
   if (typeof window !== 'undefined') {
     const params = new URLSearchParams(window.location.search);
@@ -52,9 +52,9 @@ function getInitialActiveMonth(): Date {
 
   // 3. Default to June 2026
   return new Date(2026, 5, 1);
-}
+};
 
-function getInitialActiveTab(): TabView {
+const getInitialActiveTab = (): TabView => {
   // 1. Check URL Query Parameters e.g. ?tab=payslip
   if (typeof window !== 'undefined') {
     const params = new URLSearchParams(window.location.search);
@@ -71,7 +71,7 @@ function getInitialActiveTab(): TabView {
   }
 
   return 'CALENDAR';
-}
+};
 
 export const App: React.FC = () => {
   const [activeMonthDate, setActiveMonthDate] = useState<Date>(getInitialActiveMonth);
@@ -184,12 +184,7 @@ export const App: React.FC = () => {
 
   // Master domain calculation
   const payslipSummary = useMemo(() => {
-    return WageCalculatorService.calculateMonthlyPayslip(
-      profile,
-      monthShifts,
-      commitments,
-      activeMonthDate
-    );
+    return calculateMonthlyPayslip(profile, monthShifts, commitments, activeMonthDate);
   }, [profile, monthShifts, commitments, activeMonthDate]);
 
   // Handlers for shift modal

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { ShiftImpactCalculator } from '../domain/services/ShiftImpactCalculator';
-import { ShiftIntervalCalculator } from '../domain/services/ShiftIntervalCalculator';
+import { calculateShiftGrossImpact } from '../domain/services/shiftImpactCalculator';
+import { calculateShiftBreakdown } from '../domain/services/shiftIntervalCalculator';
 import { NHS_BAND_CONFIGS } from '../domain/constants/nhsBands';
 import { EmployeeProfile } from '../domain/models/Contract';
 import { Shift } from '../domain/models/Shift';
@@ -38,9 +38,9 @@ describe('ShiftImpactCalculator', () => {
       unpaidBreakMinutes: 0,
       shiftType: 'ANNUAL_LEAVE' as const,
     };
-    const breakdown = ShiftIntervalCalculator.calculateBreakdown(shift);
+    const breakdown = calculateShiftBreakdown(shift);
 
-    const impact = ShiftImpactCalculator.calculate(
+    const impact = calculateShiftGrossImpact(
       {
         date: shift.date,
         shiftType: 'ANNUAL_LEAVE',
@@ -68,9 +68,9 @@ describe('ShiftImpactCalculator', () => {
       unpaidBreakMinutes: 30,
       shiftType: 'BANK' as const,
     };
-    const breakdown = ShiftIntervalCalculator.calculateBreakdown(shift);
+    const breakdown = calculateShiftBreakdown(shift);
 
-    const impact = ShiftImpactCalculator.calculate(
+    const impact = calculateShiftGrossImpact(
       {
         date: shift.date,
         shiftType: 'BANK',
@@ -97,9 +97,9 @@ describe('ShiftImpactCalculator', () => {
       unpaidBreakMinutes: 30,
       shiftType: 'SUBSTANTIVE' as const,
     };
-    const breakdown = ShiftIntervalCalculator.calculateBreakdown(shift);
+    const breakdown = calculateShiftBreakdown(shift);
 
-    const impact = ShiftImpactCalculator.calculate(
+    const impact = calculateShiftGrossImpact(
       {
         date: shift.date,
         shiftType: 'SUBSTANTIVE',
@@ -126,9 +126,9 @@ describe('ShiftImpactCalculator', () => {
       unpaidBreakMinutes: 30,
       shiftType: 'SUBSTANTIVE' as const,
     };
-    const breakdown = ShiftIntervalCalculator.calculateBreakdown(shift);
+    const breakdown = calculateShiftBreakdown(shift);
 
-    const impact = ShiftImpactCalculator.calculate(
+    const impact = calculateShiftGrossImpact(
       {
         date: shift.date,
         shiftType: 'SUBSTANTIVE',
@@ -186,9 +186,9 @@ describe('ShiftImpactCalculator', () => {
       unpaidBreakMinutes: 0,
       shiftType: 'SUBSTANTIVE' as const,
     };
-    const breakdown = ShiftIntervalCalculator.calculateBreakdown(candidateShift);
+    const breakdown = calculateShiftBreakdown(candidateShift);
 
-    const impact = ShiftImpactCalculator.calculate(
+    const impact = calculateShiftGrossImpact(
       {
         date: candidateShift.date,
         shiftType: 'SUBSTANTIVE',

@@ -1,15 +1,22 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Shift } from '../domain/models/Shift';
-import { ShiftIntervalCalculator } from '../domain/services/ShiftIntervalCalculator';
-import { SqliteStorage } from '../domain/database/sqliteService';
+import { calculateShiftBreakdown } from '../domain/services/shiftIntervalCalculator';
+import {
+  getAllShifts,
+  saveShift,
+  deleteShift as deleteShiftFromDb,
+  clearMonthShifts as clearMonthShiftsFromDb,
+  exportDatabaseBinary,
+  importDatabaseBinary,
+} from '../domain/database/sqliteService';
 
-export function useRoster(activeMonthDate: Date, onMutation?: () => void) {
+export const useRoster = (activeMonthDate: Date, onMutation?: () => void) => {
   const [allShifts, setAllShifts] = useState<Shift[]>([]);
   const [isShiftsLoaded, setIsShiftsLoaded] = useState(false);
 
   const reloadShiftsFromDatabase = useCallback(async () => {
     try {
-      const shifts = await SqliteStorage.getAllShifts();
+      const shifts = await getAllShifts();
       const seenDates = new Set<string>();
       const cleanShifts: Shift[] = [];
       for (const s of shifts) {
@@ -17,14 +24,14 @@ export function useRoster(activeMonthDate: Date, onMutation?: () => void) {
           seenDates.add(s.date);
           cleanShifts.push(s);
         } else {
-          SqliteStorage.deleteShift(s.id);
+          deleteShiftFromDb(s.id);
         }
       }
 
       setAllShifts(
         cleanShifts.map((s) => ({
           ...s,
-          breakdown: ShiftIntervalCalculator.calculateBreakdown(s),
+          breakdown: calculateShiftBreakdown(s),
         }))
       );
     } catch (e) {
@@ -37,7 +44,7 @@ export function useRoster(activeMonthDate: Date, onMutation?: () => void) {
     let isMounted = true;
     (async () => {
       try {
-        const shifts = await SqliteStorage.getAllShifts();
+        const shifts = await getAllShifts();
         if (isMounted) {
           // Clean up any historical duplicate shifts on the same date
           const seenDates = new Set<string>();
@@ -48,14 +55,14 @@ export function useRoster(activeMonthDate: Date, onMutation?: () => void) {
               cleanShifts.push(s);
             } else {
               // Delete duplicate from SQLite
-              SqliteStorage.deleteShift(s.id);
+              deleteShiftFromDb(s.id);
             }
           }
 
           setAllShifts(
             cleanShifts.map((s) => ({
               ...s,
-              breakdown: ShiftIntervalCalculator.calculateBreakdown(s),
+              breakdown: calculateShiftBreakdown(s),
             }))
           );
           setIsShiftsLoaded(true);
@@ -97,7 +104,7 @@ export function useRoster(activeMonthDate: Date, onMutation?: () => void) {
         const newShift: Shift = {
           ...shiftData,
           id: shiftId,
-          breakdown: ShiftIntervalCalculator.calculateBreakdown({
+          breakdown: calculateShiftBreakdown({
             ...shiftData,
             id: shiftId,
           }),
@@ -108,7 +115,7 @@ export function useRoster(activeMonthDate: Date, onMutation?: () => void) {
             ? prev.map((s, idx) => (idx === existingIndex ? newShift : s))
             : [...prev, newShift];
 
-        SqliteStorage.saveShift(newShift).catch((err) => {
+        saveShift(newShift).catch((err) => {
           console.error('Failed to save shift to SQLite storage', err);
         });
         onMutation?.();
@@ -126,9 +133,9 @@ export function useRoster(activeMonthDate: Date, onMutation?: () => void) {
           const merged = { ...s, ...updatedData };
           const withBreakdown = {
             ...merged,
-            breakdown: ShiftIntervalCalculator.calculateBreakdown(merged),
+            breakdown: calculateShiftBreakdown(merged),
           };
-          SqliteStorage.saveShift(withBreakdown).catch((err) => {
+          saveShift(withBreakdown).catch((err) => {
             console.error('Failed to update shift in SQLite', err);
           });
           onMutation?.();
@@ -142,7 +149,7 @@ export function useRoster(activeMonthDate: Date, onMutation?: () => void) {
   const deleteShift = useCallback(
     (id: string) => {
       setAllShifts((prev) => prev.filter((s) => s.id !== id));
-      SqliteStorage.deleteShift(id).catch((err) => {
+      deleteShiftFromDb(id).catch((err) => {
         console.error('Failed to delete shift from SQLite', err);
       });
       onMutation?.();
@@ -152,7 +159,7 @@ export function useRoster(activeMonthDate: Date, onMutation?: () => void) {
 
   const clearMonthShifts = useCallback(() => {
     setAllShifts((prev) => prev.filter((s) => !s.date.startsWith(currentMonthPrefix)));
-    SqliteStorage.clearMonthShifts(currentMonthPrefix).catch((err) => {
+    clearMonthShiftsFromDb(currentMonthPrefix).catch((err) => {
       console.error('Failed to clear month shifts in SQLite', err);
     });
     onMutation?.();
@@ -160,7 +167,7 @@ export function useRoster(activeMonthDate: Date, onMutation?: () => void) {
 
   // Export SQLite database as a downloadable file
   const exportSqliteDatabase = useCallback(async () => {
-    const binary = await SqliteStorage.exportDatabaseBinary();
+    const binary = await exportDatabaseBinary();
     const blob = new Blob([binary.buffer as ArrayBuffer], { type: 'application/x-sqlite3' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -176,12 +183,12 @@ export function useRoster(activeMonthDate: Date, onMutation?: () => void) {
   const importSqliteDatabase = useCallback(
     async (file: File) => {
       const buffer = await file.arrayBuffer();
-      await SqliteStorage.importDatabaseBinary(buffer);
-      const shifts = await SqliteStorage.getAllShifts();
+      await importDatabaseBinary(buffer);
+      const shifts = await getAllShifts();
       setAllShifts(
         shifts.map((s) => ({
           ...s,
-          breakdown: ShiftIntervalCalculator.calculateBreakdown(s),
+          breakdown: calculateShiftBreakdown(s),
         }))
       );
       onMutation?.();
@@ -201,4 +208,4 @@ export function useRoster(activeMonthDate: Date, onMutation?: () => void) {
     importSqliteDatabase,
     reloadShiftsFromDatabase,
   };
-}
+};

@@ -43,20 +43,22 @@ export const NHS_LEAVE_TIERS: Record<NhsServiceYearsTier, NhsLeaveTierConfig> = 
   },
 };
 
-/**
- * Returns the NHS Leave Year range (1 April to 31 March) for a given date.
- * e.g., for 2026-06-15, leave year is 2026-04-01 to 2027-03-31 (Leave Year 2026/27).
- * For 2027-02-10, leave year is 2026-04-01 to 2027-03-31 (Leave Year 2026/27).
- */
-export function getNhsLeaveYearRange(date: Date): {
+export interface NhsLeaveYearRange {
   startYear: number;
   endYear: number;
   startDateIso: string;
   endDateIso: string;
   label: string;
-} {
+}
+
+/**
+ * Returns the NHS Leave Year range (1 April to 31 March) for a given date.
+ * e.g., for 2026-06-15, leave year is 2026-04-01 to 2027-03-31 (Leave Year 2026/27).
+ * For 2027-02-10, leave year is 2026-04-01 to 2027-03-31 (Leave Year 2026/27).
+ */
+export const getNhsLeaveYearRange = (date: Date): NhsLeaveYearRange => {
   const year = date.getFullYear();
-  const month = date.getMonth(); // 0-indexed (0 = Jan, 3 = April)
+  const month = date.getMonth();
 
   const startYear = month >= 3 ? year : year - 1;
   const endYear = startYear + 1;
@@ -68,4 +70,4 @@ export function getNhsLeaveYearRange(date: Date): {
     endDateIso: `${endYear}-03-31`,
     label: `${startYear}/${String(endYear).slice(2)}`,
   };
-}
+};

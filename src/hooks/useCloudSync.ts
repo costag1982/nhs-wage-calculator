@@ -1,19 +1,24 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { CloudSyncService, SyncStatus, SyncPayload } from '../domain/services/CloudSyncService';
+import {
+  SyncStatus,
+  SyncPayload,
+  isSyncConfigured,
+  getLastSyncedAt,
+  executeSync,
+  recordLocalMutation,
+} from '../domain/services/cloudSyncService';
 
 interface UseCloudSyncProps {
   isStorageReady: boolean;
   onRemoteDataLoaded?: (payload: SyncPayload) => void;
 }
 
-export function useCloudSync({ isStorageReady, onRemoteDataLoaded }: UseCloudSyncProps) {
+export const useCloudSync = ({ isStorageReady, onRemoteDataLoaded }: UseCloudSyncProps) => {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(() => {
     if (typeof window !== 'undefined' && !navigator.onLine) return 'offline';
-    return CloudSyncService.isConfigured() ? 'idle' : 'unconfigured';
+    return isSyncConfigured() ? 'idle' : 'unconfigured';
   });
-  const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(() =>
-    CloudSyncService.getLastSyncedAt()
-  );
+  const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(() => getLastSyncedAt());
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -31,7 +36,7 @@ export function useCloudSync({ isStorageReady, onRemoteDataLoaded }: UseCloudSyn
       return;
     }
 
-    if (!CloudSyncService.isConfigured()) {
+    if (!isSyncConfigured()) {
       setSyncStatus('unconfigured');
       return;
     }
@@ -41,7 +46,7 @@ export function useCloudSync({ isStorageReady, onRemoteDataLoaded }: UseCloudSyn
     setErrorMessage(null);
 
     try {
-      const result = await CloudSyncService.executeSync();
+      const result = await executeSync();
       setSyncStatus(result.status);
 
       if (result.status === 'synced') {
@@ -66,8 +71,8 @@ export function useCloudSync({ isStorageReady, onRemoteDataLoaded }: UseCloudSyn
 
   // Debounced sync for local changes
   const scheduleAutoSync = useCallback(() => {
-    CloudSyncService.recordLocalMutation();
-    if (!CloudSyncService.isConfigured()) return;
+    recordLocalMutation();
+    if (!isSyncConfigured()) return;
 
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
@@ -80,7 +85,7 @@ export function useCloudSync({ isStorageReady, onRemoteDataLoaded }: UseCloudSyn
 
   // Initial sync when SQLite storage is ready
   useEffect(() => {
-    if (isStorageReady && CloudSyncService.isConfigured()) {
+    if (isStorageReady && isSyncConfigured()) {
       const timer = setTimeout(() => {
         performSync();
       }, 0);
@@ -100,7 +105,7 @@ export function useCloudSync({ isStorageReady, onRemoteDataLoaded }: UseCloudSyn
     };
 
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && CloudSyncService.isConfigured()) {
+      if (document.visibilityState === 'visible' && isSyncConfigured()) {
         performSync();
       }
     };
@@ -125,8 +130,8 @@ export function useCloudSync({ isStorageReady, onRemoteDataLoaded }: UseCloudSyn
     syncStatus,
     lastSyncedAt,
     errorMessage,
-    isConfigured: CloudSyncService.isConfigured(),
+    isConfigured: isSyncConfigured(),
     triggerSync: performSync,
     scheduleAutoSync,
   };
-}
+};

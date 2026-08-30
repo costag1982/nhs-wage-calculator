@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { WageCalculatorService } from '../domain/services/WageCalculatorService';
+import { calculateMonthlyPayslip } from '../domain/services/wageCalculatorService';
 import { EmployeeProfile } from '../domain/models/Contract';
 import { Shift } from '../domain/models/Shift';
 import { RecurringCommitment } from '../domain/models/Deductions';
@@ -158,7 +158,7 @@ describe('Historical Payslip Validation - Miss Gemma Howard (July 2026)', () => 
       },
     ];
 
-    const result = WageCalculatorService.calculateMonthlyPayslip(
+    const result = calculateMonthlyPayslip(
       gemmaProfile,
       sampleShifts,
       commitments,
@@ -228,7 +228,7 @@ describe('Historical Payslip Validation - Miss Gemma Howard (July 2026)', () => 
 
   it('accurately calculates payday as last working day of month across various months', () => {
     // July shifts -> Paid August 2026 (31 Aug is Bank Holiday -> Friday 28 Aug 2026)
-    const augResult = WageCalculatorService.calculateMonthlyPayslip(
+    const augResult = calculateMonthlyPayslip(
       gemmaProfile,
       [],
       commitments,
@@ -240,7 +240,7 @@ describe('Historical Payslip Validation - Miss Gemma Howard (July 2026)', () => 
     expect(augResult.payDate).toBe('28 AUG 2026');
 
     // April shifts -> Paid May 2026 (31 May is Sunday -> Friday 29 May 2026)
-    const mayResult = WageCalculatorService.calculateMonthlyPayslip(
+    const mayResult = calculateMonthlyPayslip(
       gemmaProfile,
       [],
       commitments,
@@ -252,7 +252,7 @@ describe('Historical Payslip Validation - Miss Gemma Howard (July 2026)', () => 
     expect(mayResult.payDate).toBe('29 MAY 2026');
 
     // January shifts -> Paid February 2026 (28 Feb is Saturday -> Friday 27 Feb 2026)
-    const febResult = WageCalculatorService.calculateMonthlyPayslip(
+    const febResult = calculateMonthlyPayslip(
       gemmaProfile,
       [],
       commitments,

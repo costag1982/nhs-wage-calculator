@@ -1,6 +1,15 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { CloudSyncService, SyncPayload } from '../domain/services/CloudSyncService';
-import { SqliteStorage } from '../domain/database/sqliteService';
+import {
+  isSyncConfigured,
+  getSyncConfig,
+  saveSyncConfig,
+  getLastLocalMutation,
+  recordLocalMutation,
+  testSyncConnection,
+  executeSync,
+  SyncPayload,
+} from '../domain/services/cloudSyncService';
+import * as sqliteService from '../domain/database/sqliteService';
 import { DEFAULT_GEMMA_PROFILE, DEFAULT_GEMMA_COMMITMENTS } from '../hooks/useContractSettings';
 import { DEFAULT_GEMMA_JUNE_SHIFTS } from '../domain/constants/defaultShifts';
 
@@ -30,7 +39,7 @@ vi.stubGlobal('navigator', {
   onLine: true,
 });
 
-describe('CloudSyncService', () => {
+describe('cloudSyncService', () => {
   beforeEach(() => {
     storageMock.clear();
     vi.restoreAllMocks();
@@ -45,32 +54,32 @@ describe('CloudSyncService', () => {
   });
 
   it('correctly reports unconfigured when no token is present', () => {
-    expect(CloudSyncService.isConfigured()).toBe(false);
-    expect(CloudSyncService.getConfig()).toEqual({ token: '', gistId: '' });
+    expect(isSyncConfigured()).toBe(false);
+    expect(getSyncConfig()).toEqual({ token: '', gistId: '' });
   });
 
   it('saves and retrieves configuration from localStorage', () => {
-    CloudSyncService.saveConfig('ghp_testtoken123', 'gist-abc-456');
-    expect(CloudSyncService.isConfigured()).toBe(true);
-    expect(CloudSyncService.getConfig()).toEqual({
+    saveSyncConfig('ghp_testtoken123', 'gist-abc-456');
+    expect(isSyncConfigured()).toBe(true);
+    expect(getSyncConfig()).toEqual({
       token: 'ghp_testtoken123',
       gistId: 'gist-abc-456',
     });
 
     // Clear config
-    CloudSyncService.saveConfig('', '');
-    expect(CloudSyncService.isConfigured()).toBe(false);
+    saveSyncConfig('', '');
+    expect(isSyncConfigured()).toBe(false);
   });
 
   it('records local mutation timestamps', () => {
-    expect(CloudSyncService.getLastLocalMutation()).toBe(new Date(0).toISOString());
-    CloudSyncService.recordLocalMutation();
-    const mutationTime = CloudSyncService.getLastLocalMutation();
+    expect(getLastLocalMutation()).toBe(new Date(0).toISOString());
+    recordLocalMutation();
+    const mutationTime = getLastLocalMutation();
     expect(new Date(mutationTime).getTime()).toBeGreaterThan(0);
   });
 
   it('tests connection and reports missing token', async () => {
-    const res = await CloudSyncService.testConnection('', '');
+    const res = await testSyncConnection('', '');
     expect(res.success).toBe(false);
     expect(res.message).toContain('GitHub Personal Access Token is required');
   });
@@ -83,7 +92,7 @@ describe('CloudSyncService', () => {
     });
     vi.stubGlobal('fetch', mockFetch);
 
-    const res = await CloudSyncService.testConnection('ghp_mocktoken', 'gist123');
+    const res = await testSyncConnection('ghp_mocktoken', 'gist123');
     expect(res.success).toBe(true);
     expect(res.message).toContain('Successfully connected');
     expect(mockFetch).toHaveBeenCalledWith(
@@ -104,23 +113,23 @@ describe('CloudSyncService', () => {
     });
     vi.stubGlobal('fetch', mockFetch);
 
-    const res = await CloudSyncService.testConnection('ghp_invalidtoken', 'gist123');
+    const res = await testSyncConnection('ghp_invalidtoken', 'gist123');
     expect(res.success).toBe(false);
     expect(res.message).toContain('Bad credentials (401)');
   });
 
   it('returns unconfigured if executed without credentials', async () => {
-    const result = await CloudSyncService.executeSync();
+    const result = await executeSync();
     expect(result.status).toBe('unconfigured');
   });
 
   it('pushes local payload to Gist when local is newer or remote file is missing', async () => {
-    CloudSyncService.saveConfig('ghp_token', 'gist123');
+    saveSyncConfig('ghp_token', 'gist123');
 
     // Local mutation is recent
     localStorage.setItem('nhs_last_local_mutation', new Date('2026-08-30T10:00:00Z').toISOString());
 
-    vi.spyOn(SqliteStorage, 'exportFullDataPayload').mockResolvedValue({
+    vi.spyOn(sqliteService, 'exportFullDataPayload').mockResolvedValue({
       version: 1,
       lastModified: new Date('2026-08-30T10:00:00Z').toISOString(),
       profile: DEFAULT_GEMMA_PROFILE,
@@ -159,25 +168,25 @@ describe('CloudSyncService', () => {
 
     vi.stubGlobal('fetch', mockFetch);
 
-    const result = await CloudSyncService.executeSync();
+    const result = await executeSync();
     expect(result.status).toBe('synced');
     expect(result.action).toBe('PUSHED_LOCAL');
   });
 
   it('pulls remote payload from Gist when remote is newer', async () => {
-    CloudSyncService.saveConfig('ghp_token', 'gist123');
+    saveSyncConfig('ghp_token', 'gist123');
 
     // Local mutation is old
     localStorage.setItem('nhs_last_local_mutation', new Date('2026-08-01T10:00:00Z').toISOString());
 
-    vi.spyOn(SqliteStorage, 'exportFullDataPayload').mockResolvedValue({
+    vi.spyOn(sqliteService, 'exportFullDataPayload').mockResolvedValue({
       version: 1,
       lastModified: new Date('2026-08-01T10:00:00Z').toISOString(),
       profile: DEFAULT_GEMMA_PROFILE,
       commitments: DEFAULT_GEMMA_COMMITMENTS,
       shifts: DEFAULT_GEMMA_JUNE_SHIFTS,
     });
-    vi.spyOn(SqliteStorage, 'importFullDataPayload').mockResolvedValue();
+    vi.spyOn(sqliteService, 'importFullDataPayload').mockResolvedValue();
 
     const newerRemote: SyncPayload = {
       version: 1,
@@ -201,7 +210,7 @@ describe('CloudSyncService', () => {
 
     vi.stubGlobal('fetch', mockFetch);
 
-    const result = await CloudSyncService.executeSync();
+    const result = await executeSync();
     expect(result.status).toBe('synced');
     expect(result.action).toBe('PULLED_REMOTE');
     expect(result.payload?.shifts.length).toBe(DEFAULT_GEMMA_JUNE_SHIFTS.length);

@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { WageCalculatorService } from '../domain/services/WageCalculatorService';
-import { AnnualLeaveCalculator } from '../domain/services/AnnualLeaveCalculator';
+import { calculateMonthlyPayslip } from '../domain/services/wageCalculatorService';
+import {
+  calculateAnnualLeaveEntitlement,
+  calculateAnnualLeaveBalance,
+} from '../domain/services/annualLeaveCalculator';
 import { EmployeeProfile } from '../domain/models/Contract';
 import { Shift } from '../domain/models/Shift';
 
@@ -29,7 +32,7 @@ describe('NHS Annual Leave & Entitlement (AfC Section 13)', () => {
 
   describe('AfC Section 13 Pro-Rata Hours Entitlement Formula', () => {
     it('calculates correct pro-rata entitlement for Gemma (<5 years service: 182.0 hours total)', () => {
-      const entitlement = AnnualLeaveCalculator.calculateEntitlement(gemmaProfile);
+      const entitlement = calculateAnnualLeaveEntitlement(gemmaProfile);
 
       // (26 / 37.5) * (27 * 7.5) = 140.4 hours
       expect(entitlement.annualLeaveDays).toBe(27);
@@ -48,7 +51,7 @@ describe('NHS Annual Leave & Entitlement (AfC Section 13)', () => {
         ...gemmaProfile,
         yearsOfServiceTier: 'FIVE_TO_TEN',
       };
-      const entitlement = AnnualLeaveCalculator.calculateEntitlement(profile5Years);
+      const entitlement = calculateAnnualLeaveEntitlement(profile5Years);
 
       // (26 / 37.5) * (29 * 7.5) = 150.8 hours AL + 41.6 hours BH = 192.4 hours
       expect(entitlement.annualLeaveDays).toBe(29);
@@ -62,7 +65,7 @@ describe('NHS Annual Leave & Entitlement (AfC Section 13)', () => {
         ...gemmaProfile,
         yearsOfServiceTier: 'TEN_PLUS',
       };
-      const entitlement = AnnualLeaveCalculator.calculateEntitlement(profile10Years);
+      const entitlement = calculateAnnualLeaveEntitlement(profile10Years);
 
       // (26 / 37.5) * (33 * 7.5) = 171.6 hours AL + 41.6 hours BH = 213.2 hours
       expect(entitlement.annualLeaveDays).toBe(33);
@@ -76,7 +79,7 @@ describe('NHS Annual Leave & Entitlement (AfC Section 13)', () => {
         ...gemmaProfile,
         annualLeaveCarryOverHours: 15.0,
       };
-      const entitlement = AnnualLeaveCalculator.calculateEntitlement(profileWithCarryOver);
+      const entitlement = calculateAnnualLeaveEntitlement(profileWithCarryOver);
 
       expect(entitlement.carryOverHours).toBe(15.0);
       expect(entitlement.totalEntitlementHours).toBe(197.0); // 182.0 + 15.0
@@ -114,7 +117,7 @@ describe('NHS Annual Leave & Entitlement (AfC Section 13)', () => {
         },
       ];
 
-      const balanceJune = AnnualLeaveCalculator.calculateLeaveBalance(
+      const balanceJune = calculateAnnualLeaveBalance(
         gemmaProfile,
         shifts,
         new Date(2026, 5, 1) // June 2026
@@ -167,7 +170,7 @@ describe('NHS Annual Leave & Entitlement (AfC Section 13)', () => {
         }, // 7.5h Worked
       ];
 
-      const result = WageCalculatorService.calculateMonthlyPayslip(
+      const result = calculateMonthlyPayslip(
         gemmaProfile,
         shifts,
         [],
@@ -226,12 +229,7 @@ describe('NHS Annual Leave & Entitlement (AfC Section 13)', () => {
         }, // 3.5h (Total = 26.0h)
       ];
 
-      const result = WageCalculatorService.calculateMonthlyPayslip(
-        gemmaProfile,
-        shifts,
-        [],
-        new Date(2026, 6, 1)
-      );
+      const result = calculateMonthlyPayslip(gemmaProfile, shifts, [], new Date(2026, 6, 1));
 
       // Monthly basic pay is fully paid
       expect(result.monthlyBasicPay).toBe(1460.16);
@@ -297,12 +295,7 @@ describe('NHS Annual Leave & Entitlement (AfC Section 13)', () => {
         }, // 5.0h
       ];
 
-      const result = WageCalculatorService.calculateMonthlyPayslip(
-        gemmaProfile,
-        shifts,
-        [],
-        new Date(2026, 6, 1)
-      );
+      const result = calculateMonthlyPayslip(gemmaProfile, shifts, [], new Date(2026, 6, 1));
 
       expect(result.additionalHours).toBe(11.5);
       expect(result.additionalHoursPay).toBe(148.63);
@@ -322,12 +315,7 @@ describe('NHS Annual Leave & Entitlement (AfC Section 13)', () => {
         },
       ];
 
-      const result = WageCalculatorService.calculateMonthlyPayslip(
-        gemmaProfile,
-        shifts,
-        [],
-        new Date(2026, 5, 1)
-      );
+      const result = calculateMonthlyPayslip(gemmaProfile, shifts, [], new Date(2026, 5, 1));
 
       expect(result.enhancementsTotal).toBe(0);
       expect(result.payLineItems.find((p) => p.description.includes('Sunday EN'))).toBeUndefined();
@@ -346,11 +334,7 @@ describe('NHS Annual Leave & Entitlement (AfC Section 13)', () => {
         },
       ];
 
-      const balance = AnnualLeaveCalculator.calculateLeaveBalance(
-        gemmaProfile,
-        shifts,
-        new Date(2026, 5, 1)
-      );
+      const balance = calculateAnnualLeaveBalance(gemmaProfile, shifts, new Date(2026, 5, 1));
 
       expect(balance.takenThisMonthHours).toBe(3.75);
       expect(balance.takenYearToDateHours).toBe(3.75);

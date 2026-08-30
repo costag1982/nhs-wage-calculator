@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { WageCalculatorService } from '../domain/services/WageCalculatorService';
-import { GrossPayCalculator } from '../domain/services/GrossPayCalculator';
+import { calculateMonthlyPayslip } from '../domain/services/wageCalculatorService';
+import { calculateBaseRates } from '../domain/services/grossPayCalculator';
 import { EmployeeProfile } from '../domain/models/Contract';
 import { Shift } from '../domain/models/Shift';
 
@@ -25,8 +25,8 @@ describe('Overtime, Additional Hours & Contract Types (AfC Section 3)', () => {
     payMethod: 'BACS',
   };
 
-  it('calculates GrossPayCalculator base rates correctly for part-time employee', () => {
-    const baseRates = GrossPayCalculator.calculateBaseRates(baseProfile);
+  it('calculates gross pay base rates correctly for part-time employee', () => {
+    const baseRates = calculateBaseRates(baseProfile);
     expect(baseRates.hourlyRate).toBe(12.9245);
     expect(baseRates.annualProRataSalary).toBe(17521.92);
     expect(baseRates.monthlyBasicPay).toBe(1460.16);
@@ -43,12 +43,7 @@ describe('Overtime, Additional Hours & Contract Types (AfC Section 3)', () => {
       { id: '4', date: '2026-07-09', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30 },
     ];
 
-    const result = WageCalculatorService.calculateMonthlyPayslip(
-      baseProfile,
-      shifts,
-      [],
-      new Date(2026, 6, 1)
-    );
+    const result = calculateMonthlyPayslip(baseProfile, shifts, [], new Date(2026, 6, 1));
 
     expect(result.additionalHours).toBe(4.0);
     expect(result.additionalHoursPay).toBe(51.7);
@@ -73,12 +68,7 @@ describe('Overtime, Additional Hours & Contract Types (AfC Section 3)', () => {
       { id: '6', date: '2026-07-11', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30 },
     ];
 
-    const result = WageCalculatorService.calculateMonthlyPayslip(
-      baseProfile,
-      shifts,
-      [],
-      new Date(2026, 6, 1)
-    );
+    const result = calculateMonthlyPayslip(baseProfile, shifts, [], new Date(2026, 6, 1));
 
     expect(result.additionalHours).toBe(11.5);
     expect(result.additionalHoursPay).toBe(148.63);
@@ -109,12 +99,7 @@ describe('Overtime, Additional Hours & Contract Types (AfC Section 3)', () => {
       { id: '6', date: '2026-07-11', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30 },
     ];
 
-    const result = WageCalculatorService.calculateMonthlyPayslip(
-      band8aProfile,
-      shifts,
-      [],
-      new Date(2026, 6, 1)
-    );
+    const result = calculateMonthlyPayslip(band8aProfile, shifts, [], new Date(2026, 6, 1));
 
     // Band 8a has no 1.5x overtime, only plain time additional hours
     expect(result.additionalHours).toBe(7.5);
@@ -162,12 +147,7 @@ describe('Overtime, Additional Hours & Contract Types (AfC Section 3)', () => {
       }, // 10h Bank Night
     ];
 
-    const result = WageCalculatorService.calculateMonthlyPayslip(
-      baseProfile,
-      shifts,
-      [],
-      new Date(2026, 6, 1)
-    );
+    const result = calculateMonthlyPayslip(baseProfile, shifts, [], new Date(2026, 6, 1));
 
     // Substantive additional hours and overtime must be 0 (not 10.0h)
     expect(result.additionalHours).toBeUndefined();
@@ -256,12 +236,7 @@ describe('Overtime, Additional Hours & Contract Types (AfC Section 3)', () => {
       }, // 10.0h Bank Night
     ];
 
-    const result = WageCalculatorService.calculateMonthlyPayslip(
-      baseProfile,
-      shifts,
-      [],
-      new Date(2026, 6, 1)
-    );
+    const result = calculateMonthlyPayslip(baseProfile, shifts, [], new Date(2026, 6, 1));
 
     // Substantive Additional Hours: strictly 4.0h
     expect(result.additionalHours).toBe(4.0);
@@ -290,12 +265,7 @@ describe('Overtime, Additional Hours & Contract Types (AfC Section 3)', () => {
       { id: '2', date: '2026-07-07', startTime: '20:00', endTime: '06:00', unpaidBreakMinutes: 0 },
     ];
 
-    const result = WageCalculatorService.calculateMonthlyPayslip(
-      bankProfile,
-      shifts,
-      [],
-      new Date(2026, 6, 1)
-    );
+    const result = calculateMonthlyPayslip(bankProfile, shifts, [], new Date(2026, 6, 1));
 
     // No monthly substantive basic pay
     const basicPayItem = result.payLineItems.find((p) => p.description === 'Basic Pay');
@@ -468,7 +438,7 @@ describe('Overtime, Additional Hours & Contract Types (AfC Section 3)', () => {
       }, // 7.5h
     ];
 
-    const result = WageCalculatorService.calculateMonthlyPayslip(
+    const result = calculateMonthlyPayslip(
       baseProfile,
       julyShifts,
       [],

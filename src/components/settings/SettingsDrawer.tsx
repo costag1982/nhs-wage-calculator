@@ -1,7 +1,7 @@
 import React from 'react';
 import { EmployeeProfile } from '../../domain/models/Contract';
 import { RecurringCommitment } from '../../domain/models/Deductions';
-import { SyncStatus } from '../../domain/services/CloudSyncService';
+import { SyncStatus } from '../../domain/services/cloudSyncService';
 import { PayBandSection } from './sections/PayBandSection';
 import { AnnualLeaveSection } from './sections/AnnualLeaveSection';
 import { TaxPensionSection } from './sections/TaxPensionSection';

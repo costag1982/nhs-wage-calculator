@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { ShiftIntervalCalculator } from '../domain/services/ShiftIntervalCalculator';
+import { calculateShiftBreakdown } from '../domain/services/shiftIntervalCalculator';
+import { calculateShiftGrossImpact } from '../domain/services/shiftImpactCalculator';
+import { NHS_BAND_CONFIGS } from '../domain/constants/nhsBands';
 import { Shift } from '../domain/models/Shift';
+import { EmployeeProfile } from '../domain/models/Contract';
 
 describe('ShiftIntervalCalculator', () => {
   it('correctly calculates daytime hours on a standard weekday', () => {
@@ -12,7 +15,7 @@ describe('ShiftIntervalCalculator', () => {
       unpaidBreakMinutes: 30,
     };
 
-    const breakdown = ShiftIntervalCalculator.calculateBreakdown(shift);
+    const breakdown = calculateShiftBreakdown(shift);
 
     expect(breakdown.totalWorkedHours).toBe(7.5);
     expect(breakdown.plainDayHours).toBe(7.5);
@@ -36,7 +39,7 @@ describe('ShiftIntervalCalculator', () => {
       unpaidBreakMinutes: 30,
     };
 
-    const breakdown = ShiftIntervalCalculator.calculateBreakdown(shift);
+    const breakdown = calculateShiftBreakdown(shift);
 
     expect(breakdown.totalWorkedHours).toBe(12);
     expect(breakdown.nightHours).toBe(9.6);
@@ -54,7 +57,7 @@ describe('ShiftIntervalCalculator', () => {
       unpaidBreakMinutes: 60,
     };
 
-    const breakdown = ShiftIntervalCalculator.calculateBreakdown(shift);
+    const breakdown = calculateShiftBreakdown(shift);
 
     expect(breakdown.totalWorkedHours).toBe(11.5);
     expect(breakdown.saturdayHours).toBe(11.5);
@@ -71,7 +74,7 @@ describe('ShiftIntervalCalculator', () => {
       unpaidBreakMinutes: 60,
     };
 
-    const breakdown = ShiftIntervalCalculator.calculateBreakdown(shift);
+    const breakdown = calculateShiftBreakdown(shift);
 
     expect(breakdown.totalWorkedHours).toBe(11.5);
     expect(breakdown.sundayHours).toBe(11.5);
@@ -87,17 +90,13 @@ describe('ShiftIntervalCalculator', () => {
       unpaidBreakMinutes: 60,
     };
 
-    const breakdown = ShiftIntervalCalculator.calculateBreakdown(shift);
+    const breakdown = calculateShiftBreakdown(shift);
 
     expect(breakdown.totalWorkedHours).toBe(11);
     expect(breakdown.bankHolidayHours).toBe(11);
     expect(breakdown.plainDayHours).toBe(0);
   });
 });
-
-import { calculateShiftGrossImpact } from '../domain/services/ShiftImpactCalculator';
-import { NHS_BAND_CONFIGS } from '../domain/constants/nhsBands';
-import { EmployeeProfile } from '../domain/models/Contract';
 
 describe('calculateShiftGrossImpact', () => {
   const gemmaProfile: EmployeeProfile = {
@@ -125,7 +124,7 @@ describe('calculateShiftGrossImpact', () => {
   const hourlyRate = 12.9245;
 
   it('reports £0.00 extra gross pay for a standard daytime shift within 26h weekly contracted threshold', () => {
-    const breakdown = ShiftIntervalCalculator.calculateBreakdown({
+    const breakdown = calculateShiftBreakdown({
       id: 'preview',
       date: '2026-06-03', // Wednesday
       startTime: '07:30',
@@ -152,7 +151,7 @@ describe('calculateShiftGrossImpact', () => {
   });
 
   it('reports exact unsocial enhancement (+£39.74) for a twilight night shift within 26h weekly contracted threshold', () => {
-    const breakdown = ShiftIntervalCalculator.calculateBreakdown({
+    const breakdown = calculateShiftBreakdown({
       id: 'preview',
       date: '2026-06-04', // Thursday
       startTime: '22:00',
@@ -208,7 +207,7 @@ describe('calculateShiftGrossImpact', () => {
       }, // 8h (Total 26h)
     ];
 
-    const breakdown = ShiftIntervalCalculator.calculateBreakdown({
+    const breakdown = calculateShiftBreakdown({
       id: 'preview',
       date: '2026-06-04', // Thursday
       startTime: '22:00',
@@ -239,7 +238,7 @@ describe('calculateShiftGrossImpact', () => {
   });
 
   it('reports the full shift value for Bank shifts regardless of weekly hours', () => {
-    const breakdown = ShiftIntervalCalculator.calculateBreakdown({
+    const breakdown = calculateShiftBreakdown({
       id: 'preview',
       date: '2026-06-04',
       startTime: '22:00',

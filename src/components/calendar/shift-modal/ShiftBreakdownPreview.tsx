@@ -1,7 +1,7 @@
 import React from 'react';
 import { ShiftWorkType, ShiftHoursBreakdown } from '../../../domain/models/Shift';
 import { NhsBandConfig } from '../../../domain/constants/nhsBands';
-import { ShiftGrossImpact } from '../../../domain/services/ShiftImpactCalculator';
+import { ShiftGrossImpact } from '../../../domain/services/shiftImpactCalculator';
 import { Zap, Moon, Calendar, Sparkles, Briefcase, Palmtree } from 'lucide-react';
 
 interface ShiftBreakdownPreviewProps {

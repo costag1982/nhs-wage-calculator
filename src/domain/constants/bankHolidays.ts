@@ -9,7 +9,7 @@ export interface BankHoliday {
  * Computes Easter Sunday using the Anonymous Gregorian algorithm (Meeus/Jones/Butcher).
  * Accurate for all years in the Gregorian calendar (1583 to 4099+).
  */
-function getEasterSunday(year: number): Date {
+const getEasterSunday = (year: number): Date => {
   const a = year % 19;
   const b = Math.floor(year / 100);
   const c = year % 100;
@@ -25,30 +25,29 @@ function getEasterSunday(year: number): Date {
   const month = Math.floor((h + l - 7 * m + 114) / 31);
   const day = ((h + l - 7 * m + 114) % 31) + 1;
   return new Date(Date.UTC(year, month - 1, day));
-}
+};
 
 /**
  * Finds the first Monday on or after a given day in a month.
  */
-function getFirstMonday(year: number, monthZeroIndexed: number): string {
+const getFirstMonday = (year: number, monthZeroIndexed: number): string => {
   const date = new Date(Date.UTC(year, monthZeroIndexed, 1));
   while (date.getUTCDay() !== 1) {
     date.setUTCDate(date.getUTCDate() + 1);
   }
   return formatDateIso(date);
-}
+};
 
 /**
  * Finds the last Monday in a given month.
  */
-function getLastMonday(year: number, monthZeroIndexed: number): string {
-  // Start from last day of month
+const getLastMonday = (year: number, monthZeroIndexed: number): string => {
   const date = new Date(Date.UTC(year, monthZeroIndexed + 1, 0));
   while (date.getUTCDay() !== 1) {
     date.setUTCDate(date.getUTCDate() - 1);
   }
   return formatDateIso(date);
-}
+};
 
 // In-memory cache for year-to-holidays mapping
 const yearHolidayCache = new Map<number, BankHoliday[]>();
@@ -56,7 +55,7 @@ const yearHolidayCache = new Map<number, BankHoliday[]>();
 /**
  * Computes all official England & Wales statutory bank holidays for any given year.
  */
-export function getBankHolidaysForYear(year: number): BankHoliday[] {
+export const getBankHolidaysForYear = (year: number): BankHoliday[] => {
   if (yearHolidayCache.has(year)) {
     return yearHolidayCache.get(year)!;
   }
@@ -115,27 +114,27 @@ export function getBankHolidaysForYear(year: number): BankHoliday[] {
   holidays.sort((a, b) => a.date.localeCompare(b.date));
   yearHolidayCache.set(year, holidays);
   return holidays;
-}
+};
 
 /**
  * Checks if a given ISO date string ("YYYY-MM-DD") is a UK England & Wales Bank Holiday.
  */
-export function isBankHoliday(dateStr: string): boolean {
+export const isBankHoliday = (dateStr: string): boolean => {
   if (!dateStr) return false;
   const year = parseInt(dateStr.substring(0, 4), 10);
   if (isNaN(year)) return false;
   const holidays = getBankHolidaysForYear(year);
   return holidays.some((h) => h.date === dateStr);
-}
+};
 
 /**
  * Returns the formal title of the UK Bank Holiday for a given date string, or null if not a holiday.
  */
-export function getBankHolidayTitle(dateStr: string): string | null {
+export const getBankHolidayTitle = (dateStr: string): string | null => {
   if (!dateStr) return null;
   const year = parseInt(dateStr.substring(0, 4), 10);
   if (isNaN(year)) return null;
   const holidays = getBankHolidaysForYear(year);
   const match = holidays.find((h) => h.date === dateStr);
   return match ? match.title : null;
-}
+};

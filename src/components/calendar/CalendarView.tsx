@@ -22,7 +22,7 @@ export interface CalendarCell {
 const WEEKDAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const TOTAL_CALENDAR_CELLS = 42; // 6 rows of 7 days
 
-export function generateMonthCalendarCells(activeMonthDate: Date): CalendarCell[] {
+export const generateMonthCalendarCells = (activeMonthDate: Date): CalendarCell[] => {
   const year = activeMonthDate.getFullYear();
   const month = activeMonthDate.getMonth(); // 0-11
 
@@ -80,7 +80,7 @@ export function generateMonthCalendarCells(activeMonthDate: Date): CalendarCell[
   }
 
   return calendarCells;
-}
+};
 
 export const CalendarView: React.FC<CalendarViewProps> = ({
   activeMonthDate,

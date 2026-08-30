@@ -1,7 +1,7 @@
 import React from 'react';
 import { EmployeeProfile, NhsServiceYearsTier } from '../../../domain/models/Contract';
 import { NHS_LEAVE_TIERS } from '../../../domain/constants/annualLeave';
-import { AnnualLeaveCalculator } from '../../../domain/services/AnnualLeaveCalculator';
+import { calculateAnnualLeaveEntitlement } from '../../../domain/services/annualLeaveCalculator';
 import { Palmtree } from 'lucide-react';
 
 interface AnnualLeaveSectionProps {
@@ -13,7 +13,7 @@ export const AnnualLeaveSection: React.FC<AnnualLeaveSectionProps> = ({
   profile,
   onUpdateProfile,
 }) => {
-  const leaveEntitlement = AnnualLeaveCalculator.calculateEntitlement(profile);
+  const leaveEntitlement = calculateAnnualLeaveEntitlement(profile);
 
   return (
     <div>

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { WageCalculatorService } from '../domain/services/WageCalculatorService';
+import { calculateMonthlyPayslip } from '../domain/services/wageCalculatorService';
 import { EmployeeProfile } from '../domain/models/Contract';
 import { Shift } from '../domain/models/Shift';
 
@@ -35,12 +35,7 @@ describe('Per-Shift Pay Band Override & Acting Up Calculations', () => {
       overrideBand: 'Band 3',
     };
 
-    const payslip = WageCalculatorService.calculateMonthlyPayslip(
-      band2Profile,
-      [band3Shift],
-      [],
-      new Date(2026, 6, 1)
-    );
+    const payslip = calculateMonthlyPayslip(band2Profile, [band3Shift], [], new Date(2026, 6, 1));
 
     // Basic pay should be standard Band 2 monthly basic pay (£1,460.16)
     const basicPayItem = payslip.payLineItems.find((p) => p.description === 'Basic Pay');
@@ -71,7 +66,7 @@ describe('Per-Shift Pay Band Override & Acting Up Calculations', () => {
       overrideBand: 'Band 3',
     };
 
-    const payslip = WageCalculatorService.calculateMonthlyPayslip(
+    const payslip = calculateMonthlyPayslip(
       band2Profile,
       [band3NightShift],
       [],

@@ -1,13 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import { Shift, ShiftPresetType, ShiftPreset, ShiftWorkType } from '../../domain/models/Shift';
 import { EmployeeProfile, NhsBandLevel } from '../../domain/models/Contract';
-import { ShiftIntervalCalculator } from '../../domain/services/ShiftIntervalCalculator';
-import { GrossPayCalculator } from '../../domain/services/GrossPayCalculator';
+import { calculateShiftBreakdown } from '../../domain/services/shiftIntervalCalculator';
+import { getHourlyRateForBand } from '../../domain/services/grossPayCalculator';
 import {
-  ShiftImpactCalculator,
   ShiftGrossImpact,
   calculateShiftGrossImpact,
-} from '../../domain/services/ShiftImpactCalculator';
+} from '../../domain/services/shiftImpactCalculator';
 import { getBankHolidayTitle } from '../../domain/constants/bankHolidays';
 import { NHS_BAND_CONFIGS } from '../../domain/constants/nhsBands';
 import { ShiftTypeSelector } from './shift-modal/ShiftTypeSelector';
@@ -18,7 +17,7 @@ import { ShiftBreakdownPreview } from './shift-modal/ShiftBreakdownPreview';
 import { SHIFT_PRESETS, ANNUAL_LEAVE_PRESETS } from './shift-modal/shiftModalConstants';
 import { X, Trash2, Check, Sparkles, AlertTriangle, Info } from 'lucide-react';
 
-export { ShiftImpactCalculator, calculateShiftGrossImpact };
+export { calculateShiftGrossImpact };
 export type { ShiftGrossImpact };
 
 export interface ShiftModalProps {
@@ -114,7 +113,7 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
   };
 
   const breakdown = useMemo(() => {
-    return ShiftIntervalCalculator.calculateBreakdown({
+    return calculateShiftBreakdown({
       id: 'preview',
       date: selectedDate,
       startTime,
@@ -130,7 +129,7 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
       return Number(customRate) || hourlyRate;
     }
     if (overrideBand && overrideBand !== 'Custom') {
-      return GrossPayCalculator.getHourlyRateForBand(overrideBand as NhsBandLevel);
+      return getHourlyRateForBand(overrideBand as NhsBandLevel);
     }
     return hourlyRate;
   }, [overrideBand, customRate, hourlyRate]);
@@ -138,7 +137,7 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
   const bandConfig = NHS_BAND_CONFIGS[effectiveBand] || NHS_BAND_CONFIGS['Band 2'];
 
   const payslipImpact = useMemo(() => {
-    return ShiftImpactCalculator.calculate(
+    return calculateShiftGrossImpact(
       {
         date: selectedDate,
         shiftType,
