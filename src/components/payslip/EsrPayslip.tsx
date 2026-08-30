@@ -31,7 +31,8 @@ export const EsrPayslip: React.FC<EsrPayslipProps> = ({ profile, summary }) => {
             NHS Electronic Staff Record (ESR) Payslip
           </h2>
           <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
-            Digital forecast replica for {summary.monthYearString} (hours worked in {summary.rosterMonthString})
+            Digital forecast replica for {summary.monthYearString} (hours worked in{' '}
+            {summary.rosterMonthString})
           </p>
         </div>
         <button type="button" className="btn btn-primary" onClick={handlePrint}>
@@ -93,7 +94,9 @@ export const EsrPayslip: React.FC<EsrPayslipProps> = ({ profile, summary }) => {
             <div className="cell-value tabular-nums">
               {Number.isInteger(profile.contractedWeeklyHours)
                 ? profile.contractedWeeklyHours.toFixed(1)
-                : profile.contractedWeeklyHours.toLocaleString('en-GB', { maximumFractionDigits: 2 })}
+                : profile.contractedWeeklyHours.toLocaleString('en-GB', {
+                    maximumFractionDigits: 2,
+                  })}
             </div>
           </div>
           <div className="esr-header-cell" style={{ borderTop: 'none', borderBottom: 'none' }}>

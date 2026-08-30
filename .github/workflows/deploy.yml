@@ -49,6 +49,8 @@ jobs:
       - name: Build and encrypt bundle
         env:
           PAGE_PASSWORD: ${{ secrets.PAGE_PASSWORD }}
+          VITE_SYNC_GIST_TOKEN: ${{ secrets.SYNC_GIST_TOKEN }}
+          VITE_SYNC_GIST_ID: ${{ secrets.SYNC_GIST_ID }}
         run: pnpm build:encrypted
 
       - name: Setup Pages

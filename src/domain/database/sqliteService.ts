@@ -333,9 +333,88 @@ class SqliteStorage {
     );
   }
 
+  public static async replaceAllCommitments(commitments: RecurringCommitment[]): Promise<void> {
+    const db = await this.getDb();
+    db.run('DELETE FROM recurring_commitments');
+    for (const comm of commitments) {
+      this.saveCommitmentSync(db, comm);
+    }
+    await this.persistToIndexedDb(db);
+  }
+
   public static async deleteCommitment(id: string): Promise<void> {
     const db = await this.getDb();
     db.run('DELETE FROM recurring_commitments WHERE id = ?', [id]);
+    await this.persistToIndexedDb(db);
+  }
+
+  // ==========================================
+  // FULL JSON DATA STORE EXPORT / IMPORT
+  // ==========================================
+  public static async exportFullDataPayload(): Promise<{
+    version: number;
+    lastModified: string;
+    profile: EmployeeProfile;
+    commitments: RecurringCommitment[];
+    shifts: Shift[];
+  }> {
+    const [profile, commitments, shifts] = await Promise.all([
+      this.getProfile(),
+      this.getCommitments(),
+      this.getAllShifts(),
+    ]);
+
+    const lastModified =
+      localStorage.getItem('nhs_last_local_mutation') || new Date().toISOString();
+
+    return {
+      version: 1,
+      lastModified,
+      profile,
+      commitments,
+      shifts,
+    };
+  }
+
+  public static async importFullDataPayload(payload: {
+    version: number;
+    lastModified?: string;
+    profile?: EmployeeProfile;
+    commitments?: RecurringCommitment[];
+    shifts?: Shift[];
+  }): Promise<void> {
+    const db = await this.getDb();
+    if (payload.profile) {
+      this.saveProfileSync(db, payload.profile);
+    }
+    if (payload.commitments) {
+      db.run('DELETE FROM recurring_commitments');
+      for (const comm of payload.commitments) {
+        this.saveCommitmentSync(db, comm);
+      }
+    }
+    if (payload.shifts) {
+      db.run('DELETE FROM shifts');
+      for (const shift of payload.shifts) {
+        db.run(
+          'INSERT INTO shifts (id, date, start_time, end_time, unpaid_break_minutes, preset_type, override_band, custom_hourly_rate, shift_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          [
+            shift.id,
+            shift.date,
+            shift.startTime,
+            shift.endTime,
+            shift.unpaidBreakMinutes,
+            shift.presetType || null,
+            shift.overrideBand || null,
+            shift.customHourlyRate ?? null,
+            shift.shiftType || 'SUBSTANTIVE',
+          ]
+        );
+      }
+    }
+    if (payload.lastModified) {
+      localStorage.setItem('nhs_last_local_mutation', payload.lastModified);
+    }
     await this.persistToIndexedDb(db);
   }
 

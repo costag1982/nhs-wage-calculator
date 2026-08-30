@@ -202,6 +202,78 @@ button {
   background-color: var(--rose-light);
 }
 
+/* Sync Status Badge */
+.sync-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  background: var(--bg-card-subtle);
+  color: var(--text-muted);
+  font-family: inherit;
+}
+
+.sync-badge:hover {
+  transform: translateY(-1px);
+}
+
+.sync-badge.sync-synced {
+  background-color: #f0fdf4;
+  color: #15803d;
+  border-color: #bbf7d0;
+}
+
+.sync-badge.sync-syncing {
+  background-color: #eff6ff;
+  color: var(--nhs-blue);
+  border-color: #bfdbfe;
+  cursor: default;
+}
+
+.sync-badge.sync-offline {
+  background-color: #f8fafc;
+  color: #64748b;
+  border-color: #e2e8f0;
+}
+
+.sync-badge.sync-error {
+  background-color: var(--rose-light);
+  color: var(--rose);
+  border-color: var(--rose-border);
+}
+
+.sync-badge.sync-unconfigured {
+  background-color: #f8fafc;
+  color: var(--text-muted);
+  border-color: var(--border-medium);
+  border-style: dashed;
+}
+
+.sync-badge.sync-unconfigured:hover {
+  background-color: #eff6ff;
+  color: var(--nhs-blue);
+  border-color: var(--nhs-blue);
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* Metric Cards Grid */
 .metrics-grid {
   display: grid;

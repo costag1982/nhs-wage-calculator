@@ -28,10 +28,21 @@ export const DEFAULT_GEMMA_COMMITMENTS: RecurringCommitment[] = [
   { id: '2', name: 'Staff Lottery', amount: 3.0 },
 ];
 
-export function useContractSettings() {
+export function useContractSettings(onMutation?: () => void) {
   const [profile, setProfile] = useState<EmployeeProfile>(DEFAULT_GEMMA_PROFILE);
   const [commitments, setCommitments] = useState<RecurringCommitment[]>(DEFAULT_GEMMA_COMMITMENTS);
   const [isDbLoaded, setIsDbLoaded] = useState(false);
+
+  const reloadSettingsFromDatabase = useCallback(async () => {
+    try {
+      const loadedProfile = await SqliteStorage.getProfile();
+      const loadedCommitments = await SqliteStorage.getCommitments();
+      setProfile(loadedProfile);
+      setCommitments(loadedCommitments);
+    } catch (e) {
+      console.error('Failed to reload settings from SQLite', e);
+    }
+  }, []);
 
   // Load from SQLite on mount
   useEffect(() => {
@@ -55,33 +66,45 @@ export function useContractSettings() {
     };
   }, []);
 
-  const updateProfile = useCallback((updated: Partial<EmployeeProfile>) => {
-    setProfile((prev) => {
-      const next = { ...prev, ...updated };
-      SqliteStorage.saveProfile(next);
-      return next;
-    });
-  }, []);
+  const updateProfile = useCallback(
+    (updated: Partial<EmployeeProfile>) => {
+      setProfile((prev) => {
+        const next = { ...prev, ...updated };
+        SqliteStorage.saveProfile(next);
+        onMutation?.();
+        return next;
+      });
+    },
+    [onMutation]
+  );
 
-  const addCommitment = useCallback((commitment: Omit<RecurringCommitment, 'id'>) => {
-    const newCommitment: RecurringCommitment = {
-      ...commitment,
-      id: Date.now().toString(),
-    };
-    setCommitments((prev) => {
-      const next = [...prev, newCommitment];
-      SqliteStorage.saveCommitment(newCommitment);
-      return next;
-    });
-  }, []);
+  const addCommitment = useCallback(
+    (commitment: Omit<RecurringCommitment, 'id'>) => {
+      const newCommitment: RecurringCommitment = {
+        ...commitment,
+        id: Date.now().toString(),
+      };
+      setCommitments((prev) => {
+        const next = [...prev, newCommitment];
+        SqliteStorage.saveCommitment(newCommitment);
+        onMutation?.();
+        return next;
+      });
+    },
+    [onMutation]
+  );
 
-  const removeCommitment = useCallback((id: string) => {
-    setCommitments((prev) => {
-      const next = prev.filter((c) => c.id !== id);
-      SqliteStorage.deleteCommitment(id);
-      return next;
-    });
-  }, []);
+  const removeCommitment = useCallback(
+    (id: string) => {
+      setCommitments((prev) => {
+        const next = prev.filter((c) => c.id !== id);
+        SqliteStorage.deleteCommitment(id);
+        onMutation?.();
+        return next;
+      });
+    },
+    [onMutation]
+  );
 
   const resetToGemmaDefaults = useCallback(() => {
     setProfile(DEFAULT_GEMMA_PROFILE);
@@ -90,7 +113,8 @@ export function useContractSettings() {
     for (const comm of DEFAULT_GEMMA_COMMITMENTS) {
       SqliteStorage.saveCommitment(comm);
     }
-  }, []);
+    onMutation?.();
+  }, [onMutation]);
 
   return {
     profile,
@@ -100,5 +124,6 @@ export function useContractSettings() {
     addCommitment,
     removeCommitment,
     resetToGemmaDefaults,
+    reloadSettingsFromDatabase,
   };
 }

@@ -58,7 +58,9 @@ describe('SQLite Database Schema & Operations', () => {
       ]
     );
 
-    const res = db.exec('SELECT id, date, start_time, end_time, shift_type FROM shifts WHERE id = "test-shift-1"');
+    const res = db.exec(
+      'SELECT id, date, start_time, end_time, shift_type FROM shifts WHERE id = "test-shift-1"'
+    );
     expect(res.length).toBe(1);
     expect(res[0].values[0][0]).toBe('test-shift-1');
     expect(res[0].values[0][1]).toBe('2026-07-06');

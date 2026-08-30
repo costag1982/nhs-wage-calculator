@@ -43,4 +43,3 @@ export interface Shift {
   customHourlyRate?: number;
   breakdown?: ShiftHoursBreakdown;
 }
-

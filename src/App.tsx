@@ -8,6 +8,8 @@ import { ShiftListView } from './components/dashboard/ShiftListView';
 import { EsrPayslip } from './components/payslip/EsrPayslip';
 import { ShiftModal } from './components/calendar/ShiftModal';
 import { SettingsDrawer } from './components/settings/SettingsDrawer';
+import { SyncBadge } from './components/dashboard/SyncBadge';
+import { useCloudSync } from './hooks/useCloudSync';
 import { Shift } from './domain/models/Shift';
 import {
   Calendar as CalendarIcon,
@@ -120,7 +122,13 @@ export const App: React.FC = () => {
   const [editingShift, setEditingShift] = useState<Shift | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  // Custom Hooks
+  // Cloud Sync integration ref to decouple callback creation
+  const autoSyncRef = React.useRef<() => void>(() => {});
+  const handleAutoSync = React.useCallback(() => {
+    autoSyncRef.current();
+  }, []);
+
+  // Custom Hooks with auto-sync notifications
   const {
     profile,
     commitments,
@@ -128,7 +136,8 @@ export const App: React.FC = () => {
     addCommitment,
     removeCommitment,
     resetToGemmaDefaults,
-  } = useContractSettings();
+    reloadSettingsFromDatabase,
+  } = useContractSettings(handleAutoSync);
 
   const {
     monthShifts,
@@ -138,7 +147,26 @@ export const App: React.FC = () => {
     clearMonthShifts,
     exportSqliteDatabase,
     importSqliteDatabase,
-  } = useRoster(activeMonthDate);
+    reloadShiftsFromDatabase,
+  } = useRoster(activeMonthDate, handleAutoSync);
+
+  // Cloud Sync integration
+  const {
+    syncStatus,
+    lastSyncedAt,
+    errorMessage: syncErrorMessage,
+    triggerSync,
+    scheduleAutoSync,
+  } = useCloudSync({
+    isStorageReady: true,
+    onRemoteDataLoaded: async () => {
+      await Promise.all([reloadShiftsFromDatabase(), reloadSettingsFromDatabase()]);
+    },
+  });
+
+  useEffect(() => {
+    autoSyncRef.current = scheduleAutoSync;
+  }, [scheduleAutoSync]);
 
   // Month navigation helpers
   const handlePrevMonth = () => {
@@ -207,6 +235,14 @@ export const App: React.FC = () => {
 
         {/* Month Navigation & Global Actions */}
         <div className="header-actions">
+          <SyncBadge
+            status={syncStatus}
+            lastSyncedAt={lastSyncedAt}
+            errorMessage={syncErrorMessage}
+            onSyncClick={triggerSync}
+            onConfigureClick={() => setIsSettingsOpen(true)}
+          />
+
           <div className="month-nav-bar">
             <button
               type="button"
@@ -356,6 +392,9 @@ export const App: React.FC = () => {
         onExportSqlite={exportSqliteDatabase}
         onImportSqlite={importSqliteDatabase}
         onLogout={handleLogout}
+        syncStatus={syncStatus}
+        lastSyncedAt={lastSyncedAt}
+        onTriggerSync={triggerSync}
       />
     </div>
   );

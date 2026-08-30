@@ -13,7 +13,7 @@ export class TaxCalculator {
 
     // 2. Compute personal allowance & taxable amount
     const monthlyAllowance = this.getMonthlyAllowance(cleanCode);
-    
+
     // Per HMRC PAYE Tax Tables (Table A/B monthly):
     // The taxable pay and allowance are processed in whole pounds (truncated)
     const wholeTaxablePay = Math.floor(taxablePay);

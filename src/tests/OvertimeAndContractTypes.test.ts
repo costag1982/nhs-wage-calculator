@@ -128,10 +128,38 @@ describe('Overtime, Additional Hours & Contract Types (AfC Section 3)', () => {
     // Week 27: 26.0h substantive shifts (2x 10h + 1x 6h) + 1x 10h Bank shift (total 36.0h worked)
     // Bank shift must NOT trigger 10.0h Additional Hours on substantive contract
     const shifts: Shift[] = [
-      { id: '1', date: '2026-07-06', startTime: '20:00', endTime: '06:00', unpaidBreakMinutes: 0, shiftType: 'SUBSTANTIVE' }, // 10h Night
-      { id: '2', date: '2026-07-07', startTime: '20:00', endTime: '06:00', unpaidBreakMinutes: 0, shiftType: 'SUBSTANTIVE' }, // 10h Night
-      { id: '3', date: '2026-07-08', startTime: '08:00', endTime: '14:00', unpaidBreakMinutes: 0, shiftType: 'SUBSTANTIVE' }, // 6h Day
-      { id: '4', date: '2026-07-09', startTime: '20:00', endTime: '06:00', unpaidBreakMinutes: 0, shiftType: 'BANK' },        // 10h Bank Night
+      {
+        id: '1',
+        date: '2026-07-06',
+        startTime: '20:00',
+        endTime: '06:00',
+        unpaidBreakMinutes: 0,
+        shiftType: 'SUBSTANTIVE',
+      }, // 10h Night
+      {
+        id: '2',
+        date: '2026-07-07',
+        startTime: '20:00',
+        endTime: '06:00',
+        unpaidBreakMinutes: 0,
+        shiftType: 'SUBSTANTIVE',
+      }, // 10h Night
+      {
+        id: '3',
+        date: '2026-07-08',
+        startTime: '08:00',
+        endTime: '14:00',
+        unpaidBreakMinutes: 0,
+        shiftType: 'SUBSTANTIVE',
+      }, // 6h Day
+      {
+        id: '4',
+        date: '2026-07-09',
+        startTime: '20:00',
+        endTime: '06:00',
+        unpaidBreakMinutes: 0,
+        shiftType: 'BANK',
+      }, // 10h Bank Night
     ];
 
     const result = WageCalculatorService.calculateMonthlyPayslip(
@@ -153,7 +181,9 @@ describe('Overtime, Additional Hours & Contract Types (AfC Section 3)', () => {
     expect(basicPayItem?.amount).toBe(1460.16);
 
     // Bank Basic Pay: 10.0h * £12.9245 = £129.25
-    const bankHourlyItem = result.payLineItems.find((p) => p.description.includes('Bank Basic Pay'));
+    const bankHourlyItem = result.payLineItems.find((p) =>
+      p.description.includes('Bank Basic Pay')
+    );
     expect(bankHourlyItem).toBeDefined();
     expect(bankHourlyItem?.unitsWorked).toBe(10.0);
     expect(bankHourlyItem?.amount).toBe(129.25);
@@ -184,11 +214,46 @@ describe('Overtime, Additional Hours & Contract Types (AfC Section 3)', () => {
     // - Substantive Overtime: 0h (substantive hours 30h <= 37.5h FTE threshold; bank must NOT trigger 1.5x overtime)
     // - Bank Basic Pay: 10.0h @ £12.9245 = £129.25
     const shifts: Shift[] = [
-      { id: '1', date: '2026-07-06', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30, shiftType: 'SUBSTANTIVE' }, // 7.5h
-      { id: '2', date: '2026-07-07', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30, shiftType: 'SUBSTANTIVE' }, // 7.5h
-      { id: '3', date: '2026-07-08', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30, shiftType: 'SUBSTANTIVE' }, // 7.5h
-      { id: '4', date: '2026-07-09', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30, shiftType: 'SUBSTANTIVE' }, // 7.5h
-      { id: '5', date: '2026-07-10', startTime: '20:00', endTime: '06:00', unpaidBreakMinutes: 0, shiftType: 'BANK' },        // 10.0h Bank Night
+      {
+        id: '1',
+        date: '2026-07-06',
+        startTime: '08:00',
+        endTime: '16:00',
+        unpaidBreakMinutes: 30,
+        shiftType: 'SUBSTANTIVE',
+      }, // 7.5h
+      {
+        id: '2',
+        date: '2026-07-07',
+        startTime: '08:00',
+        endTime: '16:00',
+        unpaidBreakMinutes: 30,
+        shiftType: 'SUBSTANTIVE',
+      }, // 7.5h
+      {
+        id: '3',
+        date: '2026-07-08',
+        startTime: '08:00',
+        endTime: '16:00',
+        unpaidBreakMinutes: 30,
+        shiftType: 'SUBSTANTIVE',
+      }, // 7.5h
+      {
+        id: '4',
+        date: '2026-07-09',
+        startTime: '08:00',
+        endTime: '16:00',
+        unpaidBreakMinutes: 30,
+        shiftType: 'SUBSTANTIVE',
+      }, // 7.5h
+      {
+        id: '5',
+        date: '2026-07-10',
+        startTime: '20:00',
+        endTime: '06:00',
+        unpaidBreakMinutes: 0,
+        shiftType: 'BANK',
+      }, // 10.0h Bank Night
     ];
 
     const result = WageCalculatorService.calculateMonthlyPayslip(
@@ -255,31 +320,152 @@ describe('Overtime, Additional Hours & Contract Types (AfC Section 3)', () => {
 
     const julyShifts: Shift[] = [
       // Week 1 (6–12 July): 36.0h substantive (e.g. 4x 7.5h + 6.0h Sunday on 12 July)
-      { id: 'w1-1', date: '2026-07-06', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30, shiftType: 'SUBSTANTIVE' }, // 7.5h
-      { id: 'w1-2', date: '2026-07-07', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30, shiftType: 'SUBSTANTIVE' }, // 7.5h
-      { id: 'w1-3', date: '2026-07-08', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30, shiftType: 'SUBSTANTIVE' }, // 7.5h
-      { id: 'w1-4', date: '2026-07-09', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30, shiftType: 'SUBSTANTIVE' }, // 7.5h
-      { id: 'w1-sun', date: '2026-07-12', startTime: '08:00', endTime: '14:00', unpaidBreakMinutes: 0, shiftType: 'SUBSTANTIVE' }, // 6.0h Sunday
+      {
+        id: 'w1-1',
+        date: '2026-07-06',
+        startTime: '08:00',
+        endTime: '16:00',
+        unpaidBreakMinutes: 30,
+        shiftType: 'SUBSTANTIVE',
+      }, // 7.5h
+      {
+        id: 'w1-2',
+        date: '2026-07-07',
+        startTime: '08:00',
+        endTime: '16:00',
+        unpaidBreakMinutes: 30,
+        shiftType: 'SUBSTANTIVE',
+      }, // 7.5h
+      {
+        id: 'w1-3',
+        date: '2026-07-08',
+        startTime: '08:00',
+        endTime: '16:00',
+        unpaidBreakMinutes: 30,
+        shiftType: 'SUBSTANTIVE',
+      }, // 7.5h
+      {
+        id: 'w1-4',
+        date: '2026-07-09',
+        startTime: '08:00',
+        endTime: '16:00',
+        unpaidBreakMinutes: 30,
+        shiftType: 'SUBSTANTIVE',
+      }, // 7.5h
+      {
+        id: 'w1-sun',
+        date: '2026-07-12',
+        startTime: '08:00',
+        endTime: '14:00',
+        unpaidBreakMinutes: 0,
+        shiftType: 'SUBSTANTIVE',
+      }, // 6.0h Sunday
 
       // Week 2 (13–19 July):
       // Substantive: 3x 7.5h = 22.5h (< 26.0h -> 0 additional hours)
-      { id: 'w2-1', date: '2026-07-13', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30, shiftType: 'SUBSTANTIVE' }, // 7.5h
-      { id: 'w2-2', date: '2026-07-15', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30, shiftType: 'SUBSTANTIVE' }, // 7.5h
-      { id: 'w2-3', date: '2026-07-17', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30, shiftType: 'SUBSTANTIVE' }, // 7.5h
+      {
+        id: 'w2-1',
+        date: '2026-07-13',
+        startTime: '08:00',
+        endTime: '16:00',
+        unpaidBreakMinutes: 30,
+        shiftType: 'SUBSTANTIVE',
+      }, // 7.5h
+      {
+        id: 'w2-2',
+        date: '2026-07-15',
+        startTime: '08:00',
+        endTime: '16:00',
+        unpaidBreakMinutes: 30,
+        shiftType: 'SUBSTANTIVE',
+      }, // 7.5h
+      {
+        id: 'w2-3',
+        date: '2026-07-17',
+        startTime: '08:00',
+        endTime: '16:00',
+        unpaidBreakMinutes: 30,
+        shiftType: 'SUBSTANTIVE',
+      }, // 7.5h
       // Bank shifts in Week 2:
-      { id: 'w2-bnk-14', date: '2026-07-14', startTime: '17:00', endTime: '20:00', unpaidBreakMinutes: 0, shiftType: 'BANK' }, // 3.0h Bank (Band 2)
-      { id: 'w2-bnk-19', date: '2026-07-19', startTime: '08:00', endTime: '13:30', unpaidBreakMinutes: 0, shiftType: 'BANK', overrideBand: 'Band 3', customHourlyRate: band3HourlyRate }, // 5.5h Bank Sunday (Band 3)
+      {
+        id: 'w2-bnk-14',
+        date: '2026-07-14',
+        startTime: '17:00',
+        endTime: '20:00',
+        unpaidBreakMinutes: 0,
+        shiftType: 'BANK',
+      }, // 3.0h Bank (Band 2)
+      {
+        id: 'w2-bnk-19',
+        date: '2026-07-19',
+        startTime: '08:00',
+        endTime: '13:30',
+        unpaidBreakMinutes: 0,
+        shiftType: 'BANK',
+        overrideBand: 'Band 3',
+        customHourlyRate: band3HourlyRate,
+      }, // 5.5h Bank Sunday (Band 3)
 
       // Week 3 (20–26 July): 30.5h substantive (3x 7.5h + 8.0h Sunday on 26 July -> 4.5h additional)
-      { id: 'w3-1', date: '2026-07-20', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30, shiftType: 'SUBSTANTIVE' }, // 7.5h
-      { id: 'w3-2', date: '2026-07-22', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30, shiftType: 'SUBSTANTIVE' }, // 7.5h
-      { id: 'w3-3', date: '2026-07-24', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30, shiftType: 'SUBSTANTIVE' }, // 7.5h
-      { id: 'w3-sun', date: '2026-07-26', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 0, shiftType: 'SUBSTANTIVE' }, // 8.0h Sunday
+      {
+        id: 'w3-1',
+        date: '2026-07-20',
+        startTime: '08:00',
+        endTime: '16:00',
+        unpaidBreakMinutes: 30,
+        shiftType: 'SUBSTANTIVE',
+      }, // 7.5h
+      {
+        id: 'w3-2',
+        date: '2026-07-22',
+        startTime: '08:00',
+        endTime: '16:00',
+        unpaidBreakMinutes: 30,
+        shiftType: 'SUBSTANTIVE',
+      }, // 7.5h
+      {
+        id: 'w3-3',
+        date: '2026-07-24',
+        startTime: '08:00',
+        endTime: '16:00',
+        unpaidBreakMinutes: 30,
+        shiftType: 'SUBSTANTIVE',
+      }, // 7.5h
+      {
+        id: 'w3-sun',
+        date: '2026-07-26',
+        startTime: '08:00',
+        endTime: '16:00',
+        unpaidBreakMinutes: 0,
+        shiftType: 'SUBSTANTIVE',
+      }, // 8.0h Sunday
 
       // Week 4 (27–31 July): 22.5h substantive (3x 7.5h -> 0 additional)
-      { id: 'w4-1', date: '2026-07-27', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30, shiftType: 'SUBSTANTIVE' }, // 7.5h
-      { id: 'w4-2', date: '2026-07-29', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30, shiftType: 'SUBSTANTIVE' }, // 7.5h
-      { id: 'w4-3', date: '2026-07-31', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30, shiftType: 'SUBSTANTIVE' }, // 7.5h
+      {
+        id: 'w4-1',
+        date: '2026-07-27',
+        startTime: '08:00',
+        endTime: '16:00',
+        unpaidBreakMinutes: 30,
+        shiftType: 'SUBSTANTIVE',
+      }, // 7.5h
+      {
+        id: 'w4-2',
+        date: '2026-07-29',
+        startTime: '08:00',
+        endTime: '16:00',
+        unpaidBreakMinutes: 30,
+        shiftType: 'SUBSTANTIVE',
+      }, // 7.5h
+      {
+        id: 'w4-3',
+        date: '2026-07-31',
+        startTime: '08:00',
+        endTime: '16:00',
+        unpaidBreakMinutes: 30,
+        shiftType: 'SUBSTANTIVE',
+      }, // 7.5h
     ];
 
     const result = WageCalculatorService.calculateMonthlyPayslip(
@@ -302,11 +488,15 @@ describe('Overtime, Additional Hours & Contract Types (AfC Section 3)', () => {
     expect(substantiveSundayItem?.amount).toBe(150.18); // 11.62 * 12.9245 = 150.18
 
     // 3. No Acting Up Allowance (Band 3 was worked as a Bank shift, not substantive acting up)
-    const actingUpItem = result.payLineItems.find((p) => p.description === 'Higher Band / Acting Up Allowance');
+    const actingUpItem = result.payLineItems.find(
+      (p) => p.description === 'Higher Band / Acting Up Allowance'
+    );
     expect(actingUpItem).toBeUndefined();
 
     // 4. Bank Basic Pay
-    const bankBand3Item = result.payLineItems.find((p) => p.description.includes('Bank Basic Pay (Band 3)'));
+    const bankBand3Item = result.payLineItems.find((p) =>
+      p.description.includes('Bank Basic Pay (Band 3)')
+    );
     expect(bankBand3Item).toBeDefined();
     expect(bankBand3Item?.unitsWorked).toBe(5.5);
     expect(bankBand3Item?.rate).toBe(14.05);
@@ -325,6 +515,3 @@ describe('Overtime, Additional Hours & Contract Types (AfC Section 3)', () => {
     expect(bankSundayItem?.amount).toBe(64.07); // 4.56 * 14.05 = 64.07
   });
 });
-
-
-

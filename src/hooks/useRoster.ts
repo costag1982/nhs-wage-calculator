@@ -3,9 +3,34 @@ import { Shift } from '../domain/models/Shift';
 import { ShiftIntervalCalculator } from '../domain/services/ShiftIntervalCalculator';
 import { SqliteStorage } from '../domain/database/sqliteService';
 
-export function useRoster(activeMonthDate: Date) {
+export function useRoster(activeMonthDate: Date, onMutation?: () => void) {
   const [allShifts, setAllShifts] = useState<Shift[]>([]);
   const [isShiftsLoaded, setIsShiftsLoaded] = useState(false);
+
+  const reloadShiftsFromDatabase = useCallback(async () => {
+    try {
+      const shifts = await SqliteStorage.getAllShifts();
+      const seenDates = new Set<string>();
+      const cleanShifts: Shift[] = [];
+      for (const s of shifts) {
+        if (!seenDates.has(s.date)) {
+          seenDates.add(s.date);
+          cleanShifts.push(s);
+        } else {
+          SqliteStorage.deleteShift(s.id);
+        }
+      }
+
+      setAllShifts(
+        cleanShifts.map((s) => ({
+          ...s,
+          breakdown: ShiftIntervalCalculator.calculateBreakdown(s),
+        }))
+      );
+    } catch (e) {
+      console.error('Failed to reload shifts from SQLite', e);
+    }
+  }, []);
 
   // Load shifts from SQLite database on mount
   useEffect(() => {
@@ -57,58 +82,71 @@ export function useRoster(activeMonthDate: Date) {
     return allShifts.filter((s) => s.date.startsWith(currentMonthPrefix));
   }, [allShifts, currentMonthPrefix]);
 
-  const addShift = useCallback((shiftData: Omit<Shift, 'id' | 'breakdown'>) => {
-    setAllShifts((prev) => {
-      // If a shift already exists on this date, replace it to prevent duplicates
-      const existingIndex = prev.findIndex((s) => s.date === shiftData.date);
-      const shiftId =
-        existingIndex !== -1
-          ? prev[existingIndex].id
-          : `shift-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
+  const addShift = useCallback(
+    (shiftData: Omit<Shift, 'id' | 'breakdown'>) => {
+      setAllShifts((prev) => {
+        // If a shift already exists on this date, replace it to prevent duplicates
+        const existingIndex = prev.findIndex((s) => s.date === shiftData.date);
+        const shiftId =
+          existingIndex !== -1
+            ? prev[existingIndex].id
+            : `shift-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
 
-      const newShift: Shift = {
-        ...shiftData,
-        id: shiftId,
-        breakdown: ShiftIntervalCalculator.calculateBreakdown({
+        const newShift: Shift = {
           ...shiftData,
           id: shiftId,
-        }),
-      };
-
-      const next =
-        existingIndex !== -1
-          ? prev.map((s, idx) => (idx === existingIndex ? newShift : s))
-          : [...prev, newShift];
-
-      SqliteStorage.saveShift(newShift);
-      return next;
-    });
-  }, []);
-
-  const updateShift = useCallback((id: string, updatedData: Partial<Shift>) => {
-    setAllShifts((prev) =>
-      prev.map((s) => {
-        if (s.id !== id) return s;
-        const merged = { ...s, ...updatedData };
-        const withBreakdown = {
-          ...merged,
-          breakdown: ShiftIntervalCalculator.calculateBreakdown(merged),
+          breakdown: ShiftIntervalCalculator.calculateBreakdown({
+            ...shiftData,
+            id: shiftId,
+          }),
         };
-        SqliteStorage.saveShift(withBreakdown);
-        return withBreakdown;
-      })
-    );
-  }, []);
 
-  const deleteShift = useCallback((id: string) => {
-    setAllShifts((prev) => prev.filter((s) => s.id !== id));
-    SqliteStorage.deleteShift(id);
-  }, []);
+        const next =
+          existingIndex !== -1
+            ? prev.map((s, idx) => (idx === existingIndex ? newShift : s))
+            : [...prev, newShift];
+
+        SqliteStorage.saveShift(newShift);
+        onMutation?.();
+        return next;
+      });
+    },
+    [onMutation]
+  );
+
+  const updateShift = useCallback(
+    (id: string, updatedData: Partial<Shift>) => {
+      setAllShifts((prev) =>
+        prev.map((s) => {
+          if (s.id !== id) return s;
+          const merged = { ...s, ...updatedData };
+          const withBreakdown = {
+            ...merged,
+            breakdown: ShiftIntervalCalculator.calculateBreakdown(merged),
+          };
+          SqliteStorage.saveShift(withBreakdown);
+          onMutation?.();
+          return withBreakdown;
+        })
+      );
+    },
+    [onMutation]
+  );
+
+  const deleteShift = useCallback(
+    (id: string) => {
+      setAllShifts((prev) => prev.filter((s) => s.id !== id));
+      SqliteStorage.deleteShift(id);
+      onMutation?.();
+    },
+    [onMutation]
+  );
 
   const clearMonthShifts = useCallback(() => {
     setAllShifts((prev) => prev.filter((s) => !s.date.startsWith(currentMonthPrefix)));
     SqliteStorage.clearMonthShifts(currentMonthPrefix);
-  }, [currentMonthPrefix]);
+    onMutation?.();
+  }, [currentMonthPrefix, onMutation]);
 
   // Export SQLite database as a downloadable file
   const exportSqliteDatabase = useCallback(async () => {
@@ -125,17 +163,21 @@ export function useRoster(activeMonthDate: Date) {
   }, []);
 
   // Import SQLite database from a user file
-  const importSqliteDatabase = useCallback(async (file: File) => {
-    const buffer = await file.arrayBuffer();
-    await SqliteStorage.importDatabaseBinary(buffer);
-    const shifts = await SqliteStorage.getAllShifts();
-    setAllShifts(
-      shifts.map((s) => ({
-        ...s,
-        breakdown: ShiftIntervalCalculator.calculateBreakdown(s),
-      }))
-    );
-  }, []);
+  const importSqliteDatabase = useCallback(
+    async (file: File) => {
+      const buffer = await file.arrayBuffer();
+      await SqliteStorage.importDatabaseBinary(buffer);
+      const shifts = await SqliteStorage.getAllShifts();
+      setAllShifts(
+        shifts.map((s) => ({
+          ...s,
+          breakdown: ShiftIntervalCalculator.calculateBreakdown(s),
+        }))
+      );
+      onMutation?.();
+    },
+    [onMutation]
+  );
 
   return {
     allShifts,
@@ -147,5 +189,6 @@ export function useRoster(activeMonthDate: Date) {
     clearMonthShifts,
     exportSqliteDatabase,
     importSqliteDatabase,
+    reloadShiftsFromDatabase,
   };
 }

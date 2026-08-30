@@ -23,7 +23,6 @@ import {
   Briefcase,
 } from 'lucide-react';
 
-
 interface ShiftModalProps {
   isOpen: boolean;
   selectedDate: string; // "YYYY-MM-DD"
@@ -514,7 +513,8 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
                     fontWeight: 600,
                   }}
                 >
-                  ℹ️ Excluded from substantive 26h additional-hours calculation (paid as Bank Hourly Pay).
+                  ℹ️ Excluded from substantive 26h additional-hours calculation (paid as Bank Hourly
+                  Pay).
                 </div>
               )}
               <div className="preview-pill-list">

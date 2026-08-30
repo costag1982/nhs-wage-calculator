@@ -66,9 +66,7 @@ export class WageCalculatorService {
 
     // Separate substantive shifts from bank shifts
     const substantiveShifts =
-      profile.contractType === 'SUBSTANTIVE'
-        ? shifts.filter((s) => s.shiftType !== 'BANK')
-        : [];
+      profile.contractType === 'SUBSTANTIVE' ? shifts.filter((s) => s.shiftType !== 'BANK') : [];
     const bankShifts =
       profile.contractType === 'BANK_HOURLY'
         ? shifts
@@ -398,9 +396,7 @@ export class WageCalculatorService {
       for (const item of groupEnhancements) {
         if (item.amount > 0) {
           totalEnhancementAmount += item.amount;
-          const enhancementDescription = isPureBank
-            ? item.description
-            : `Bank ${item.description}`;
+          const enhancementDescription = isPureBank ? item.description : `Bank ${item.description}`;
           payLineItems.push({
             description: enhancementDescription,
             unitsWorked: item.unitsWorked,
@@ -521,7 +517,6 @@ export class WageCalculatorService {
     return payLineItems;
   }
 
-
   private static calculateDeductions(
     grossPay: number,
     profile: EmployeeProfile,
@@ -620,4 +615,3 @@ export class WageCalculatorService {
     };
   }
 }
-
