@@ -14,44 +14,58 @@ export const ShiftTypeSelector: React.FC<ShiftTypeSelectorProps> = ({
   return (
     <div className="form-group">
       <label className="form-label">
-        <Briefcase size={14} style={{ display: 'inline', marginRight: '4px' }} />
+        <Briefcase size={13} style={{ display: 'inline', marginRight: '4px' }} />
         Entry & Work Type
       </label>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.4rem' }}>
         <button
           type="button"
           className={`preset-btn ${shiftType === 'SUBSTANTIVE' ? 'active' : ''}`}
           onClick={() => onSelectType('SUBSTANTIVE')}
-          style={{ textAlign: 'left', alignItems: 'flex-start', padding: '0.6rem 0.75rem' }}
+          style={{ padding: '0.45rem 0.5rem', textAlign: 'center', alignItems: 'center' }}
         >
-          <span style={{ fontWeight: 700 }}>Substantive Shift</span>
-          <span className="preset-btn-time">Contracted post (counts towards weekly threshold)</span>
+          <span style={{ fontWeight: 700, fontSize: '0.8125rem' }}>Substantive</span>
+          <span className="preset-btn-time">Contracted (26h)</span>
         </button>
         <button
           type="button"
           className={`preset-btn ${shiftType === 'BANK' ? 'active' : ''}`}
           onClick={() => onSelectType('BANK')}
-          style={{ textAlign: 'left', alignItems: 'flex-start', padding: '0.6rem 0.75rem' }}
+          style={{ padding: '0.45rem 0.5rem', textAlign: 'center', alignItems: 'center' }}
         >
-          <span style={{ fontWeight: 700, color: 'var(--indigo)' }}>Bank Shift</span>
-          <span className="preset-btn-time">Paid at Bank Hourly Rate (separate)</span>
+          <span
+            style={{
+              fontWeight: 700,
+              fontSize: '0.8125rem',
+              color: shiftType === 'BANK' ? 'inherit' : 'var(--indigo)',
+            }}
+          >
+            Bank Shift
+          </span>
+          <span className="preset-btn-time">Hourly Extra</span>
         </button>
         <button
           type="button"
           className={`preset-btn ${shiftType === 'ANNUAL_LEAVE' ? 'active' : ''}`}
           onClick={() => onSelectType('ANNUAL_LEAVE')}
           style={{
-            textAlign: 'left',
-            alignItems: 'flex-start',
-            padding: '0.6rem 0.75rem',
+            padding: '0.45rem 0.5rem',
+            textAlign: 'center',
+            alignItems: 'center',
             borderColor: shiftType === 'ANNUAL_LEAVE' ? 'var(--emerald)' : undefined,
           }}
         >
-          <span style={{ fontWeight: 700, color: '#047857' }}>
-            <Palmtree size={13} style={{ display: 'inline', marginRight: '3px' }} />
+          <span
+            style={{
+              fontWeight: 700,
+              fontSize: '0.8125rem',
+              color: shiftType === 'ANNUAL_LEAVE' ? 'inherit' : '#047857',
+            }}
+          >
+            <Palmtree size={12} style={{ display: 'inline', marginRight: '2px' }} />
             Annual Leave
           </span>
-          <span className="preset-btn-time">Paid time off (deducts from leave pot)</span>
+          <span className="preset-btn-time">Paid Time Off</span>
         </button>
       </div>
     </div>

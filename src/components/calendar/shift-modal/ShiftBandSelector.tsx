@@ -26,27 +26,49 @@ export const ShiftBandSelector: React.FC<ShiftBandSelectorProps> = ({
 }) => {
   return (
     <>
-      <div className="form-group">
-        <label className="form-label" htmlFor="shift-band-override">
-          <ShieldCheck size={14} style={{ display: 'inline', marginRight: '4px' }} />
-          Pay Band for this Shift (Optional Override / Acting Up)
-        </label>
-        <select
-          id="shift-band-override"
-          className="form-select"
-          value={overrideBand}
-          onChange={(e) => onOverrideBandChange(e.target.value)}
-        >
-          <option value="">
-            Default from Settings ({defaultProfileBand} - £{hourlyRate.toFixed(2)}/hr)
-          </option>
-          {BAND_OVERRIDE_OPTIONS.filter((item) => item.band !== defaultProfileBand).map((item) => (
-            <option key={item.band} value={item.band}>
-              {item.label}
+      <div className="form-row">
+        <div className="form-group">
+          <label className="form-label" htmlFor="shift-band-override">
+            <ShieldCheck size={13} style={{ display: 'inline', marginRight: '3px' }} />
+            Pay Band Override
+          </label>
+          <select
+            id="shift-band-override"
+            className="form-select"
+            value={overrideBand}
+            onChange={(e) => onOverrideBandChange(e.target.value)}
+          >
+            <option value="">
+              Default ({defaultProfileBand} - £{hourlyRate.toFixed(2)})
             </option>
-          ))}
-          <option value="Custom">Custom Hourly Rate (£/hr)</option>
-        </select>
+            {BAND_OVERRIDE_OPTIONS.filter((item) => item.band !== defaultProfileBand).map(
+              (item) => (
+                <option key={item.band} value={item.band}>
+                  {item.label}
+                </option>
+              )
+            )}
+            <option value="Custom">Custom Rate (£/hr)</option>
+          </select>
+        </div>
+
+        <div className="form-group">
+          <label className="form-label" htmlFor="shift-modal-unpaid-break">
+            Unpaid Break
+          </label>
+          <select
+            id="shift-modal-unpaid-break"
+            className="form-select"
+            value={unpaidBreakMinutes}
+            onChange={(e) => onUnpaidBreakChange(Number(e.target.value))}
+          >
+            <option value={0}>0m (No break)</option>
+            <option value={15}>15m break</option>
+            <option value={30}>30m (NHS break)</option>
+            <option value={45}>45m break</option>
+            <option value={60}>60m (1h break)</option>
+          </select>
+        </div>
       </div>
 
       {overrideBand === 'Custom' && (
@@ -67,24 +89,6 @@ export const ShiftBandSelector: React.FC<ShiftBandSelectorProps> = ({
           />
         </div>
       )}
-
-      <div className="form-group">
-        <label className="form-label" htmlFor="shift-modal-unpaid-break">
-          Unpaid Break (Minutes)
-        </label>
-        <select
-          id="shift-modal-unpaid-break"
-          className="form-select"
-          value={unpaidBreakMinutes}
-          onChange={(e) => onUnpaidBreakChange(Number(e.target.value))}
-        >
-          <option value={0}>0 minutes (No unpaid break)</option>
-          <option value={15}>15 minutes</option>
-          <option value={30}>30 minutes (Standard NHS break)</option>
-          <option value={45}>45 minutes</option>
-          <option value={60}>60 minutes (1 hour break)</option>
-        </select>
-      </div>
     </>
   );
 };
