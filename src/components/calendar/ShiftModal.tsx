@@ -1,100 +1,37 @@
 import React, { useState, useMemo } from 'react';
-import {
-  Shift,
-  ShiftPresetType,
-  ShiftPreset,
-  ShiftHoursBreakdown,
-  ShiftWorkType,
-} from '../../domain/models/Shift';
-import { NhsBandLevel } from '../../domain/models/Contract';
+import { Shift, ShiftPresetType, ShiftPreset, ShiftWorkType } from '../../domain/models/Shift';
+import { EmployeeProfile, NhsBandLevel } from '../../domain/models/Contract';
 import { ShiftIntervalCalculator } from '../../domain/services/ShiftIntervalCalculator';
 import { GrossPayCalculator } from '../../domain/services/GrossPayCalculator';
-import { getBankHolidayTitle } from '../../domain/constants/bankHolidays';
-import { NHS_BAND_CONFIGS, NhsBandConfig } from '../../domain/constants/nhsBands';
 import {
-  X,
-  Trash2,
-  Check,
-  Clock,
-  Sparkles,
-  Coins,
-  AlertTriangle,
-  ShieldCheck,
-  Briefcase,
-} from 'lucide-react';
+  ShiftImpactCalculator,
+  ShiftGrossImpact,
+  calculateShiftGrossImpact,
+} from '../../domain/services/ShiftImpactCalculator';
+import { getBankHolidayTitle } from '../../domain/constants/bankHolidays';
+import { NHS_BAND_CONFIGS } from '../../domain/constants/nhsBands';
+import { ShiftTypeSelector } from './shift-modal/ShiftTypeSelector';
+import { ShiftTemplatePicker } from './shift-modal/ShiftTemplatePicker';
+import { ShiftTimeInputs } from './shift-modal/ShiftTimeInputs';
+import { ShiftBandSelector } from './shift-modal/ShiftBandSelector';
+import { ShiftBreakdownPreview } from './shift-modal/ShiftBreakdownPreview';
+import { X, Trash2, Check, Sparkles, AlertTriangle } from 'lucide-react';
 
-interface ShiftModalProps {
+export { ShiftImpactCalculator, calculateShiftGrossImpact };
+export type { ShiftGrossImpact };
+
+export interface ShiftModalProps {
   isOpen: boolean;
   selectedDate: string; // "YYYY-MM-DD"
   initialShift?: Shift | null;
   existingShifts?: Shift[];
   hourlyRate: number;
   defaultProfileBand?: NhsBandLevel;
+  profile?: EmployeeProfile;
   onClose: () => void;
   onSave: (shiftData: Omit<Shift, 'id' | 'breakdown'>) => void;
   onDelete?: (id: string) => void;
 }
-
-const SHIFT_PRESETS: ShiftPreset[] = [
-  {
-    id: 'TWILIGHT',
-    label: 'Twilight',
-    startTime: '22:00',
-    endTime: '06:00',
-    unpaidBreakMinutes: 30,
-    description: '22:00 - 06:00 (Night Duty)',
-  },
-  {
-    id: 'HALF_TWILIGHT',
-    label: 'Half Twilight',
-    startTime: '22:00',
-    endTime: '02:00',
-    unpaidBreakMinutes: 0,
-    description: '22:00 - 02:00 (4h Night)',
-  },
-  {
-    id: 'MORNING',
-    label: 'Morning',
-    startTime: '07:30',
-    endTime: '15:30',
-    unpaidBreakMinutes: 30,
-    description: '07:30 - 15:30 (Day)',
-  },
-  {
-    id: 'LONG_DAY',
-    label: 'Long Day',
-    startTime: '12:00',
-    endTime: '20:30',
-    unpaidBreakMinutes: 30,
-    description: '12:00 - 20:30 (Day & Unsocial)',
-  },
-  {
-    id: 'EVENING',
-    label: 'Evening',
-    startTime: '16:00',
-    endTime: '21:30',
-    unpaidBreakMinutes: 30,
-    description: '16:00 - 21:30 (Evening)',
-  },
-  {
-    id: 'CUSTOM',
-    label: 'Custom',
-    startTime: '08:00',
-    endTime: '16:00',
-    unpaidBreakMinutes: 30,
-    description: 'Enter custom times',
-  },
-];
-
-const BAND_OVERRIDE_OPTIONS = [
-  { band: 'Band 2', label: 'Band 2 (£12.92/hr)' },
-  { band: 'Band 3', label: 'Band 3 (£13.55/hr - Higher Band / Acting Up)' },
-  { band: 'Band 4', label: 'Band 4 (£14.53/hr)' },
-  { band: 'Band 5', label: 'Band 5 (£15.87/hr)' },
-  { band: 'Band 6', label: 'Band 6 (£19.64/hr)' },
-  { band: 'Band 7', label: 'Band 7 (£24.10/hr)' },
-  { band: 'Band 8a', label: 'Band 8a (£28.13/hr)' },
-];
 
 export const ShiftModal: React.FC<ShiftModalProps> = (props) => {
   if (!props.isOpen) return null;
@@ -112,33 +49,36 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
   existingShifts,
   hourlyRate,
   defaultProfileBand = 'Band 2',
+  profile,
   onClose,
   onSave,
   onDelete,
 }) => {
-  const [presetType, setPresetType] = useState<ShiftPresetType>(
-    initialShift?.presetType || 'TWILIGHT'
-  );
   const [shiftType, setShiftType] = useState<ShiftWorkType>(
     initialShift?.shiftType || 'SUBSTANTIVE'
   );
-  const [startTime, setStartTime] = useState<string>(initialShift?.startTime || '22:00');
-  const [endTime, setEndTime] = useState<string>(initialShift?.endTime || '06:00');
+  const [presetType, setPresetType] = useState<ShiftPresetType>(
+    initialShift?.presetType || (initialShift?.shiftType === 'ANNUAL_LEAVE' ? 'CUSTOM' : 'TWILIGHT')
+  );
+  const [startTime, setStartTime] = useState<string>(
+    initialShift?.startTime || (shiftType === 'ANNUAL_LEAVE' ? '08:00' : '22:00')
+  );
+  const [endTime, setEndTime] = useState<string>(
+    initialShift?.endTime || (shiftType === 'ANNUAL_LEAVE' ? '15:30' : '06:00')
+  );
   const [unpaidBreakMinutes, setUnpaidBreakMinutes] = useState<number>(
-    initialShift?.unpaidBreakMinutes ?? 30
+    initialShift?.unpaidBreakMinutes ?? (shiftType === 'ANNUAL_LEAVE' ? 0 : 30)
   );
   const [overrideBand, setOverrideBand] = useState<string>(initialShift?.overrideBand || '');
   const [customRate, setCustomRate] = useState<string>(
     initialShift?.customHourlyRate ? String(initialShift.customHourlyRate) : ''
   );
 
-  // Detect if another shift is already scheduled for this date
   const conflictingShift = useMemo(() => {
     if (!existingShifts) return null;
     return existingShifts.find((s) => s.date === selectedDate && s.id !== initialShift?.id) || null;
   }, [existingShifts, selectedDate, initialShift]);
 
-  // End time cannot equal start time
   const endTimeError = useMemo(() => {
     if (startTime && endTime && startTime === endTime) {
       return 'Finish time cannot be the same as start time.';
@@ -155,7 +95,22 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
     }
   };
 
-  // Live breakdown calculation
+  const handleSwitchShiftType = (newType: ShiftWorkType) => {
+    setShiftType(newType);
+    if (newType === 'ANNUAL_LEAVE') {
+      setPresetType('CUSTOM');
+      setStartTime('08:00');
+      setEndTime('15:30');
+      setUnpaidBreakMinutes(0);
+      setOverrideBand('');
+    } else if (shiftType === 'ANNUAL_LEAVE') {
+      setPresetType('TWILIGHT');
+      setStartTime('22:00');
+      setEndTime('06:00');
+      setUnpaidBreakMinutes(30);
+    }
+  };
+
   const breakdown = useMemo(() => {
     return ShiftIntervalCalculator.calculateBreakdown({
       id: 'preview',
@@ -163,10 +118,10 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
       startTime,
       endTime,
       unpaidBreakMinutes,
+      shiftType,
     });
-  }, [selectedDate, startTime, endTime, unpaidBreakMinutes]);
+  }, [selectedDate, startTime, endTime, unpaidBreakMinutes, shiftType]);
 
-  // Effective hourly rate and band rules for this specific shift
   const effectiveBand = (overrideBand || defaultProfileBand) as NhsBandLevel;
   const effectiveRate = useMemo(() => {
     if (overrideBand === 'Custom' && customRate) {
@@ -180,10 +135,29 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
 
   const bandConfig = NHS_BAND_CONFIGS[effectiveBand] || NHS_BAND_CONFIGS['Band 2'];
 
-  // Estimated shift earnings (Basic + Unsocial enhancements)
-  const estimatedShiftEarnings = useMemo(() => {
-    return calculateEstimatedShiftEarnings(breakdown, effectiveRate, bandConfig);
-  }, [breakdown, effectiveRate, bandConfig]);
+  const payslipImpact = useMemo(() => {
+    return ShiftImpactCalculator.calculate(
+      {
+        date: selectedDate,
+        shiftType,
+        breakdown,
+        effectiveRate,
+        bandConfig,
+        initialShiftId: initialShift?.id,
+      },
+      existingShifts || [],
+      profile
+    );
+  }, [
+    selectedDate,
+    shiftType,
+    breakdown,
+    effectiveRate,
+    bandConfig,
+    initialShift,
+    existingShifts,
+    profile,
+  ]);
 
   const bankHolidayName = useMemo(() => {
     return getBankHolidayTitle(selectedDate);
@@ -218,14 +192,32 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
     onClose();
   };
 
+  const modalTitle = initialShift
+    ? shiftType === 'ANNUAL_LEAVE'
+      ? 'Edit Annual Leave'
+      : 'Edit Shift'
+    : shiftType === 'ANNUAL_LEAVE'
+      ? 'Book Annual Leave'
+      : conflictingShift
+        ? 'Replace Shift'
+        : 'Add Shift';
+
+  const saveButtonLabel = initialShift
+    ? shiftType === 'ANNUAL_LEAVE'
+      ? 'Update Leave'
+      : 'Update Shift'
+    : shiftType === 'ANNUAL_LEAVE'
+      ? 'Book Leave'
+      : conflictingShift
+        ? 'Replace & Save'
+        : 'Save Shift';
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div>
-            <h2 className="modal-title">
-              {initialShift ? 'Edit Shift' : conflictingShift ? 'Replace Shift' : 'Add Shift'}
-            </h2>
+            <h2 className="modal-title">{modalTitle}</h2>
             <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>{formattedDate}</p>
           </div>
           <button
@@ -257,7 +249,7 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
               >
                 <AlertTriangle size={16} />
                 <span>
-                  A shift ({conflictingShift.startTime} - {conflictingShift.endTime}) is already
+                  An entry ({conflictingShift.startTime} - {conflictingShift.endTime}) is already
                   scheduled for this day. Saving will update and replace it so you do not have
                   duplicates.
                 </span>
@@ -280,278 +272,51 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
                 }}
               >
                 <Sparkles size={16} />
-                <span>UK Bank Holiday: {bankHolidayName} (Paid at +83% unsocial rate)</span>
+                <span>
+                  {shiftType === 'ANNUAL_LEAVE'
+                    ? `UK Bank Holiday: ${bankHolidayName} (Booking leave deducts hours from your entitlement pot)`
+                    : `UK Bank Holiday: ${bankHolidayName} (Paid at +83% unsocial rate)`}
+                </span>
               </div>
             )}
 
-            {/* Shift Work / Contract Type Selector */}
-            <div className="form-group">
-              <label className="form-label">
-                <Briefcase size={14} style={{ display: 'inline', marginRight: '4px' }} />
-                Contract & Work Type
-              </label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                <button
-                  type="button"
-                  className={`preset-btn ${shiftType === 'SUBSTANTIVE' ? 'active' : ''}`}
-                  onClick={() => setShiftType('SUBSTANTIVE')}
-                  style={{ textAlign: 'left', alignItems: 'flex-start', padding: '0.6rem 0.75rem' }}
-                >
-                  <span style={{ fontWeight: 700 }}>Substantive Shift</span>
-                  <span className="preset-btn-time">
-                    Contracted post (counts towards 26h additional hours)
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  className={`preset-btn ${shiftType === 'BANK' ? 'active' : ''}`}
-                  onClick={() => setShiftType('BANK')}
-                  style={{ textAlign: 'left', alignItems: 'flex-start', padding: '0.6rem 0.75rem' }}
-                >
-                  <span style={{ fontWeight: 700, color: 'var(--indigo)' }}>Bank Shift</span>
-                  <span className="preset-btn-time">
-                    Paid at Bank Hourly Rate (excluded from 26h threshold)
-                  </span>
-                </button>
-              </div>
-            </div>
+            <ShiftTypeSelector shiftType={shiftType} onSelectType={handleSwitchShiftType} />
 
-            {/* Shift Presets */}
-            <div className="form-group">
-              <label className="form-label">Shift Template</label>
-              <div className="preset-buttons-grid">
-                {SHIFT_PRESETS.map((preset) => (
-                  <button
-                    key={preset.id}
-                    type="button"
-                    className={`preset-btn ${presetType === preset.id ? 'active' : ''}`}
-                    onClick={() => handleSelectPreset(preset)}
-                  >
-                    <span>{preset.label}</span>
-                    {preset.id !== 'CUSTOM' && (
-                      <span className="preset-btn-time">
-                        {preset.startTime} - {preset.endTime}
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Time Pickers */}
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label" htmlFor="start-time">
-                  Start Time
-                </label>
-                <input
-                  id="start-time"
-                  type="time"
-                  className="form-input"
-                  value={startTime}
-                  onChange={(e) => {
-                    setStartTime(e.target.value);
-                    setPresetType('CUSTOM');
-                  }}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label" htmlFor="end-time">
-                  Finish Time
-                </label>
-                <input
-                  id="end-time"
-                  type="time"
-                  className="form-input"
-                  value={endTime}
-                  onChange={(e) => {
-                    setEndTime(e.target.value);
-                    setPresetType('CUSTOM');
-                  }}
-                  required
-                />
-              </div>
-            </div>
-
-            {endTimeError && (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                  color: 'var(--rose)',
-                  fontSize: '0.8125rem',
-                  fontWeight: 600,
-                  marginTop: '-0.25rem',
-                }}
-              >
-                <AlertTriangle size={14} />
-                {endTimeError}
-              </div>
+            {shiftType !== 'ANNUAL_LEAVE' && (
+              <ShiftTemplatePicker presetType={presetType} onSelectPreset={handleSelectPreset} />
             )}
 
-            <div className="form-group">
-              <label className="form-label" htmlFor="shift-band">
-                <ShieldCheck size={14} style={{ display: 'inline', marginRight: '4px' }} />
-                Pay Band for this Shift (Optional Override / Acting Up)
-              </label>
-              <select
-                id="shift-band"
-                className="form-select"
-                value={overrideBand}
-                onChange={(e) => setOverrideBand(e.target.value)}
-              >
-                <option value="">
-                  Default from Settings ({defaultProfileBand} - £{hourlyRate.toFixed(2)}/hr)
-                </option>
-                {BAND_OVERRIDE_OPTIONS.filter((item) => item.band !== defaultProfileBand).map(
-                  (item) => (
-                    <option key={item.band} value={item.band}>
-                      {item.label}
-                    </option>
-                  )
-                )}
-                <option value="Custom">Custom Hourly Rate (£/hr)</option>
-              </select>
-            </div>
-
-            {overrideBand === 'Custom' && (
-              <div className="form-group">
-                <label className="form-label" htmlFor="custom-shift-rate">
-                  Custom Shift Hourly Rate (£/hr)
-                </label>
-                <input
-                  id="custom-shift-rate"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  className="form-input"
-                  placeholder="e.g. 15.50"
-                  value={customRate}
-                  onChange={(e) => setCustomRate(e.target.value)}
-                  required
-                />
-              </div>
+            {(shiftType === 'ANNUAL_LEAVE' || presetType === 'CUSTOM') && (
+              <ShiftTimeInputs
+                startTime={startTime}
+                endTime={endTime}
+                endTimeError={endTimeError}
+                onStartTimeChange={setStartTime}
+                onEndTimeChange={setEndTime}
+              />
             )}
 
-            {/* Unpaid Break */}
-            <div className="form-group">
-              <label className="form-label" htmlFor="unpaid-break">
-                Unpaid Break (Minutes)
-              </label>
-              <select
-                id="unpaid-break"
-                className="form-select"
-                value={unpaidBreakMinutes}
-                onChange={(e) => setUnpaidBreakMinutes(Number(e.target.value))}
-              >
-                <option value={0}>0 minutes (No unpaid break)</option>
-                <option value={15}>15 minutes</option>
-                <option value={30}>30 minutes (Standard NHS break)</option>
-                <option value={45}>45 minutes</option>
-                <option value={60}>60 minutes (1 hour break)</option>
-              </select>
-            </div>
+            {shiftType !== 'ANNUAL_LEAVE' && (
+              <ShiftBandSelector
+                overrideBand={overrideBand}
+                customRate={customRate}
+                defaultProfileBand={defaultProfileBand}
+                hourlyRate={hourlyRate}
+                unpaidBreakMinutes={unpaidBreakMinutes}
+                onOverrideBandChange={setOverrideBand}
+                onCustomRateChange={setCustomRate}
+                onUnpaidBreakChange={setUnpaidBreakMinutes}
+              />
+            )}
 
-            {/* Live Calculation Preview Box */}
-            <div className="shift-preview-box">
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: '0.75rem',
-                }}
-              >
-                <div className="shift-preview-header" style={{ margin: 0 }}>
-                  <Clock size={14} style={{ display: 'inline', marginRight: '4px' }} />
-                  Calculated Shift Breakdown
-                  {shiftType === 'BANK' && (
-                    <span
-                      style={{
-                        marginLeft: '8px',
-                        fontSize: '0.75rem',
-                        fontWeight: 700,
-                        color: '#4338ca',
-                        background: '#e0e7ff',
-                        padding: '1px 6px',
-                        borderRadius: '4px',
-                      }}
-                    >
-                      Bank Shift
-                    </span>
-                  )}
-                  {overrideBand && (
-                    <span
-                      style={{
-                        marginLeft: '8px',
-                        fontSize: '0.75rem',
-                        fontWeight: 700,
-                        color: 'var(--nhs-blue)',
-                        background: '#e0f2fe',
-                        padding: '1px 6px',
-                        borderRadius: '4px',
-                      }}
-                    >
-                      {overrideBand} (£{effectiveRate.toFixed(2)}/hr)
-                    </span>
-                  )}
-                </div>
-                <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--emerald)' }}>
-                  <Coins size={14} style={{ display: 'inline', marginRight: '4px' }} />
-                  ~£{estimatedShiftEarnings.toFixed(2)} estimated
-                </div>
-              </div>
-              {shiftType === 'BANK' && (
-                <div
-                  style={{
-                    fontSize: '0.75rem',
-                    color: 'var(--indigo)',
-                    marginBottom: '0.5rem',
-                    fontWeight: 600,
-                  }}
-                >
-                  ℹ️ Excluded from substantive 26h additional-hours calculation (paid as Bank Hourly
-                  Pay).
-                </div>
-              )}
-              <div className="preview-pill-list">
-                <div className="preview-pill">
-                  Total Paid: <strong>{breakdown.totalWorkedHours} hrs</strong>
-                </div>
-                {breakdown.plainDayHours > 0 && (
-                  <div className="preview-pill">
-                    Day: <strong>{breakdown.plainDayHours}h</strong>
-                  </div>
-                )}
-                {breakdown.nightHours > 0 && (
-                  <div className="preview-pill" style={{ borderColor: 'var(--indigo-border)' }}>
-                    🌙 Night (+{(bandConfig.nightEnhancementRate * 100).toFixed(0)}%):{' '}
-                    <strong>{breakdown.nightHours}h</strong>
-                  </div>
-                )}
-                {breakdown.saturdayHours > 0 && (
-                  <div className="preview-pill" style={{ borderColor: 'var(--rose-border)' }}>
-                    Saturday (+{(bandConfig.saturdayEnhancementRate * 100).toFixed(0)}%):{' '}
-                    <strong>{breakdown.saturdayHours}h</strong>
-                  </div>
-                )}
-                {breakdown.sundayHours > 0 && (
-                  <div className="preview-pill" style={{ borderColor: 'var(--emerald-border)' }}>
-                    Sunday (+{(bandConfig.sundayAndHolidayEnhancementRate * 100).toFixed(0)}%):{' '}
-                    <strong>{breakdown.sundayHours}h</strong>
-                  </div>
-                )}
-                {breakdown.bankHolidayHours > 0 && (
-                  <div className="preview-pill" style={{ borderColor: 'var(--amber-border)' }}>
-                    Bank Hol (+{(bandConfig.sundayAndHolidayEnhancementRate * 100).toFixed(0)}%):{' '}
-                    <strong>{breakdown.bankHolidayHours}h</strong>
-                  </div>
-                )}
-              </div>
-            </div>
+            <ShiftBreakdownPreview
+              shiftType={shiftType}
+              overrideBand={overrideBand}
+              effectiveRate={effectiveRate}
+              breakdown={breakdown}
+              bandConfig={bandConfig}
+              payslipImpact={payslipImpact}
+            />
           </div>
 
           <div className="modal-footer">
@@ -577,7 +342,7 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
               </button>
               <button type="submit" className="btn btn-primary" disabled={!!endTimeError}>
                 <Check size={16} />
-                {initialShift ? 'Update Shift' : conflictingShift ? 'Replace & Save' : 'Save Shift'}
+                {saveButtonLabel}
               </button>
             </div>
           </div>
@@ -586,18 +351,3 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
     </div>
   );
 };
-
-function calculateEstimatedShiftEarnings(
-  breakdown: ShiftHoursBreakdown,
-  effectiveRate: number,
-  bandConfig: NhsBandConfig
-): number {
-  const baseValue = breakdown.totalWorkedHours * effectiveRate;
-  const nightTopUp = breakdown.nightHours * (effectiveRate * bandConfig.nightEnhancementRate);
-  const satTopUp = breakdown.saturdayHours * (effectiveRate * bandConfig.saturdayEnhancementRate);
-  const sunTopUp =
-    breakdown.sundayHours * (effectiveRate * bandConfig.sundayAndHolidayEnhancementRate);
-  const bhTopUp =
-    breakdown.bankHolidayHours * (effectiveRate * bandConfig.sundayAndHolidayEnhancementRate);
-  return baseValue + nightTopUp + satTopUp + sunTopUp + bhTopUp;
-}

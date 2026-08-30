@@ -49,6 +49,12 @@ interface OvertimeCalculationResult {
   overtimePay: number;
 }
 
+interface ShiftRateGroup {
+  band: NhsBandLevel;
+  rate: number;
+  breakdown: ShiftHoursBreakdown;
+}
+
 export class WageCalculatorService {
   /**
    * Calculates the full expected NHS wage slip summary for a given roster month.
@@ -64,18 +70,33 @@ export class WageCalculatorService {
     const baseRates = GrossPayCalculator.calculateBaseRates(profile);
     const hoursBreakdown = this.aggregateShiftHours(shifts);
 
-    // Separate substantive shifts from bank shifts
+    // Separate substantive shifts, bank shifts, and annual leave
     const substantiveShifts =
+      profile.contractType === 'SUBSTANTIVE'
+        ? shifts.filter((s) => s.shiftType !== 'BANK' && s.shiftType !== 'ANNUAL_LEAVE')
+        : [];
+    const substantiveAndLeaveShifts =
       profile.contractType === 'SUBSTANTIVE' ? shifts.filter((s) => s.shiftType !== 'BANK') : [];
     const bankShifts =
       profile.contractType === 'BANK_HOURLY'
         ? shifts
         : shifts.filter((s) => s.shiftType === 'BANK');
+    const annualLeaveShifts = shifts.filter((s) => s.shiftType === 'ANNUAL_LEAVE');
+    const annualLeaveHours = roundHours(
+      annualLeaveShifts.reduce((acc, s) => {
+        const bd = s.breakdown || ShiftIntervalCalculator.calculateBreakdown(s);
+        return acc + bd.totalWorkedHours;
+      }, 0)
+    );
 
     // 1. Substantive Additional Hours & Overtime calculation (AfC Section 3)
     const overtimeResult =
       profile.contractType === 'SUBSTANTIVE'
-        ? this.calculateAdditionalAndOvertimePay(substantiveShifts, profile, baseRates.hourlyRate)
+        ? this.calculateAdditionalAndOvertimePay(
+            substantiveAndLeaveShifts,
+            profile,
+            baseRates.hourlyRate
+          )
         : { additionalHours: 0, additionalHoursPay: 0, overtimeHours: 0, overtimePay: 0 };
 
     // 2. Substantive Unsocial Enhancements & Acting Up (AfC Section 2)
@@ -134,6 +155,7 @@ export class WageCalculatorService {
       grossPay,
       pensionablePay: grossPay,
       taxablePay: deductions.taxablePay,
+      annualLeaveHours,
       ...(profile.contractType === 'SUBSTANTIVE' &&
         overtimeResult.additionalHours > 0 && {
           additionalHours: overtimeResult.additionalHours,
@@ -205,59 +227,18 @@ export class WageCalculatorService {
     baseHourlyRate: number
   ): SubstantiveEnhancements {
     const agg = this.getEmptyEnhancements();
+    const groups = this.groupShiftsByBandAndRate(substantiveShifts, profile, baseHourlyRate);
 
-    // Group substantive shifts by (band, rate)
-    const groups = new Map<
-      string,
-      {
-        band: NhsBandLevel;
-        rate: number;
-        breakdown: ShiftHoursBreakdown;
+    // Calculate acting-up allowance for substantive shifts paid at higher rates
+    for (const group of groups) {
+      if (group.rate > baseHourlyRate) {
+        const diff = group.rate - baseHourlyRate;
+        agg.actingUpHours += group.breakdown.totalWorkedHours;
+        agg.actingUpAmount += group.breakdown.totalWorkedHours * diff;
       }
-    >();
-
-    for (const shift of substantiveShifts) {
-      const breakdown = shift.breakdown || ShiftIntervalCalculator.calculateBreakdown(shift);
-      const shiftBand = shift.overrideBand || profile.band;
-      const shiftRate =
-        shift.customHourlyRate ??
-        (shift.overrideBand
-          ? GrossPayCalculator.getHourlyRateForBand(shift.overrideBand)
-          : baseHourlyRate);
-
-      if (shiftRate > baseHourlyRate) {
-        const diff = shiftRate - baseHourlyRate;
-        agg.actingUpHours += breakdown.totalWorkedHours;
-        agg.actingUpAmount += breakdown.totalWorkedHours * diff;
-      }
-
-      const key = `${shiftBand}_${shiftRate}`;
-      let group = groups.get(key);
-      if (!group) {
-        group = {
-          band: shiftBand,
-          rate: shiftRate,
-          breakdown: {
-            totalWorkedHours: 0,
-            plainDayHours: 0,
-            nightHours: 0,
-            saturdayHours: 0,
-            sundayHours: 0,
-            bankHolidayHours: 0,
-          },
-        };
-        groups.set(key, group);
-      }
-
-      group.breakdown.totalWorkedHours += breakdown.totalWorkedHours;
-      group.breakdown.plainDayHours += breakdown.plainDayHours;
-      group.breakdown.nightHours += breakdown.nightHours;
-      group.breakdown.saturdayHours += breakdown.saturdayHours;
-      group.breakdown.sundayHours += breakdown.sundayHours;
-      group.breakdown.bankHolidayHours += breakdown.bankHolidayHours;
     }
 
-    for (const group of groups.values()) {
+    for (const group of groups) {
       const { payLineItems: groupEnhancements } = EnhancementRateCalculator.calculateEnhancements(
         group.band,
         group.rate,
@@ -317,56 +298,14 @@ export class WageCalculatorService {
       };
     }
 
-    const groups = new Map<
-      string,
-      {
-        band: NhsBandLevel;
-        rate: number;
-        breakdown: ShiftHoursBreakdown;
-      }
-    >();
-
-    for (const shift of bankShifts) {
-      const breakdown = shift.breakdown || ShiftIntervalCalculator.calculateBreakdown(shift);
-      const shiftBand = shift.overrideBand || profile.band;
-      const shiftRate =
-        shift.customHourlyRate ??
-        (shift.overrideBand
-          ? GrossPayCalculator.getHourlyRateForBand(shift.overrideBand)
-          : baseHourlyRate);
-
-      const key = `${shiftBand}_${shiftRate}`;
-      let group = groups.get(key);
-      if (!group) {
-        group = {
-          band: shiftBand,
-          rate: shiftRate,
-          breakdown: {
-            totalWorkedHours: 0,
-            plainDayHours: 0,
-            nightHours: 0,
-            saturdayHours: 0,
-            sundayHours: 0,
-            bankHolidayHours: 0,
-          },
-        };
-        groups.set(key, group);
-      }
-
-      group.breakdown.totalWorkedHours += breakdown.totalWorkedHours;
-      group.breakdown.plainDayHours += breakdown.plainDayHours;
-      group.breakdown.nightHours += breakdown.nightHours;
-      group.breakdown.saturdayHours += breakdown.saturdayHours;
-      group.breakdown.sundayHours += breakdown.sundayHours;
-      group.breakdown.bankHolidayHours += breakdown.bankHolidayHours;
-    }
+    const groups = this.groupShiftsByBandAndRate(bankShifts, profile, baseHourlyRate);
 
     const payLineItems: PayLineItem[] = [];
     let totalBasicPay = 0;
     let totalEnhancementAmount = 0;
     let totalHours = 0;
 
-    for (const group of groups.values()) {
+    for (const group of groups) {
       const groupHours = roundHours(group.breakdown.totalWorkedHours);
       const groupBasicAmount = roundCurrency(groupHours * group.rate);
       totalHours += groupHours;
@@ -414,6 +353,51 @@ export class WageCalculatorService {
       totalEnhancementAmount: roundCurrency(totalEnhancementAmount),
       totalHours: roundHours(totalHours),
     };
+  }
+
+  private static groupShiftsByBandAndRate(
+    shifts: Shift[],
+    profile: EmployeeProfile,
+    baseHourlyRate: number
+  ): ShiftRateGroup[] {
+    const groups = new Map<string, ShiftRateGroup>();
+
+    for (const shift of shifts) {
+      const breakdown = shift.breakdown || ShiftIntervalCalculator.calculateBreakdown(shift);
+      const shiftBand = shift.overrideBand || profile.band;
+      const shiftRate =
+        shift.customHourlyRate ??
+        (shift.overrideBand
+          ? GrossPayCalculator.getHourlyRateForBand(shift.overrideBand)
+          : baseHourlyRate);
+
+      const key = `${shiftBand}_${shiftRate}`;
+      let group = groups.get(key);
+      if (!group) {
+        group = {
+          band: shiftBand,
+          rate: shiftRate,
+          breakdown: {
+            totalWorkedHours: 0,
+            plainDayHours: 0,
+            nightHours: 0,
+            saturdayHours: 0,
+            sundayHours: 0,
+            bankHolidayHours: 0,
+          },
+        };
+        groups.set(key, group);
+      }
+
+      group.breakdown.totalWorkedHours += breakdown.totalWorkedHours;
+      group.breakdown.plainDayHours += breakdown.plainDayHours;
+      group.breakdown.nightHours += breakdown.nightHours;
+      group.breakdown.saturdayHours += breakdown.saturdayHours;
+      group.breakdown.sundayHours += breakdown.sundayHours;
+      group.breakdown.bankHolidayHours += breakdown.bankHolidayHours;
+    }
+
+    return Array.from(groups.values());
   }
 
   private static buildPayLineItems(
@@ -564,21 +548,31 @@ export class WageCalculatorService {
    * - Overtime: hours above FTE threshold (Bands 1–7 only) → time-and-a-half (1.5×)
    * - Bands 8a–9: all excess hours paid at plain time; no 1.5× premium
    *
-   * Note: Bank shifts are excluded from substantive weekly hours calculation.
+   * Note:
+   * - Bank shifts are excluded from substantive weekly hours calculation.
+   * - Annual leave hours count towards meeting weekly contracted thresholds (e.g. 26.0h),
+   *   allowing excess worked hours to qualify for Additional Hours / Overtime.
    */
   private static calculateAdditionalAndOvertimePay(
     shifts: Shift[],
     profile: EmployeeProfile,
     hourlyRate: number
   ): OvertimeCalculationResult {
-    const weekMap = new Map<string, number>();
+    const weekMap = new Map<string, { workedHours: number; leaveHours: number }>();
     for (const shift of shifts) {
       // Exclude bank shifts from substantive contracted hours calculation
       if (shift.shiftType === 'BANK') continue;
 
       const breakdown = shift.breakdown || ShiftIntervalCalculator.calculateBreakdown(shift);
       const weekKey = getIsoWeekKey(shift.date);
-      weekMap.set(weekKey, (weekMap.get(weekKey) ?? 0) + breakdown.totalWorkedHours);
+      const entry = weekMap.get(weekKey) ?? { workedHours: 0, leaveHours: 0 };
+
+      if (shift.shiftType === 'ANNUAL_LEAVE') {
+        entry.leaveHours += breakdown.totalWorkedHours;
+      } else {
+        entry.workedHours += breakdown.totalWorkedHours;
+      }
+      weekMap.set(weekKey, entry);
     }
 
     const contractedWeekly = profile.contractedWeeklyHours;
@@ -590,17 +584,24 @@ export class WageCalculatorService {
     let totalAdditionalHours = 0;
     let totalOvertimeHours = 0;
 
-    for (const [, weeklyHours] of weekMap) {
-      if (weeklyHours <= contractedWeekly) continue;
+    for (const [, { workedHours, leaveHours }] of weekMap) {
+      const totalWeeklyAccounted = workedHours + leaveHours;
+      if (totalWeeklyAccounted <= contractedWeekly) continue;
+
+      const potentialExcess = totalWeeklyAccounted - contractedWeekly;
+      // Additional / Overtime pay is strictly paid on actual worked hours in excess of threshold
+      const paidExcess = Math.min(workedHours, potentialExcess);
+      if (paidExcess <= 0) continue;
 
       if (isOvertimeEligible) {
-        const additionalCap = Math.max(0, fteThreshold - contractedWeekly);
-        const additionalThisWeek = Math.min(weeklyHours - contractedWeekly, additionalCap);
-        const overtimeThisWeek = Math.max(0, weeklyHours - fteThreshold);
+        const potentialOvertime = Math.max(0, totalWeeklyAccounted - fteThreshold);
+        const overtimeThisWeek = Math.min(paidExcess, potentialOvertime);
+        const additionalThisWeek = paidExcess - overtimeThisWeek;
+
         totalAdditionalHours += additionalThisWeek;
         totalOvertimeHours += overtimeThisWeek;
       } else {
-        totalAdditionalHours += weeklyHours - contractedWeekly;
+        totalAdditionalHours += paidExcess;
       }
     }
 

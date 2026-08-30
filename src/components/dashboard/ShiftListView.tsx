@@ -71,14 +71,34 @@ export const ShiftListView: React.FC<ShiftListViewProps> = ({
             });
 
             const breakdown = shift.breakdown;
+            const isLeave = shift.shiftType === 'ANNUAL_LEAVE';
 
             return (
               <tr key={shift.id}>
                 <td className="text-left font-bold">{dayFormatted}</td>
                 <td className="text-left">
                   <span style={{ fontWeight: 600 }}>
-                    {shift.presetType ? shift.presetType.replace('_', ' ') : 'Custom'}
+                    {isLeave
+                      ? 'Annual Leave'
+                      : shift.presetType
+                        ? shift.presetType.replace('_', ' ')
+                        : 'Custom'}
                   </span>
+                  {isLeave && (
+                    <span
+                      style={{
+                        marginLeft: '6px',
+                        fontSize: '0.6875rem',
+                        fontWeight: 700,
+                        color: '#047857',
+                        background: '#ecfdf5',
+                        padding: '1px 5px',
+                        borderRadius: '4px',
+                      }}
+                    >
+                      🌴 Leave
+                    </span>
+                  )}
                   {shift.shiftType === 'BANK' && (
                     <span
                       style={{
@@ -121,48 +141,57 @@ export const ShiftListView: React.FC<ShiftListViewProps> = ({
                   {breakdown?.totalWorkedHours} hrs
                 </td>
                 <td className="text-left">
-                  <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
-                    {breakdown && breakdown.nightHours > 0 && (
-                      <span
-                        className="enhancement-micro-badge"
-                        style={{ background: '#f5f3ff', color: '#5b21b6' }}
-                      >
-                        🌙 Night: {breakdown.nightHours}h
-                      </span>
-                    )}
-                    {breakdown && breakdown.saturdayHours > 0 && (
-                      <span
-                        className="enhancement-micro-badge"
-                        style={{ background: '#fff1f2', color: '#9f1239' }}
-                      >
-                        Sat: {breakdown.saturdayHours}h
-                      </span>
-                    )}
-                    {breakdown && breakdown.sundayHours > 0 && (
-                      <span
-                        className="enhancement-micro-badge"
-                        style={{ background: '#ecfdf5', color: '#047857' }}
-                      >
-                        Sun: {breakdown.sundayHours}h
-                      </span>
-                    )}
-                    {breakdown && breakdown.bankHolidayHours > 0 && (
-                      <span
-                        className="enhancement-micro-badge"
-                        style={{ background: '#fffbeb', color: '#92400e' }}
-                      >
-                        BH: {breakdown.bankHolidayHours}h
-                      </span>
-                    )}
-                    {breakdown && breakdown.plainDayHours > 0 && (
-                      <span
-                        className="enhancement-micro-badge"
-                        style={{ background: '#eff6ff', color: 'var(--nhs-blue)' }}
-                      >
-                        Day: {breakdown.plainDayHours}h
-                      </span>
-                    )}
-                  </div>
+                  {isLeave ? (
+                    <span
+                      className="enhancement-micro-badge"
+                      style={{ background: '#ecfdf5', color: '#047857' }}
+                    >
+                      🌴 Paid Annual Leave ({breakdown?.totalWorkedHours}h)
+                    </span>
+                  ) : (
+                    <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                      {breakdown && breakdown.nightHours > 0 && (
+                        <span
+                          className="enhancement-micro-badge"
+                          style={{ background: '#f5f3ff', color: '#5b21b6' }}
+                        >
+                          🌙 Night: {breakdown.nightHours}h
+                        </span>
+                      )}
+                      {breakdown && breakdown.saturdayHours > 0 && (
+                        <span
+                          className="enhancement-micro-badge"
+                          style={{ background: '#fff1f2', color: '#9f1239' }}
+                        >
+                          Sat: {breakdown.saturdayHours}h
+                        </span>
+                      )}
+                      {breakdown && breakdown.sundayHours > 0 && (
+                        <span
+                          className="enhancement-micro-badge"
+                          style={{ background: '#ecfdf5', color: '#047857' }}
+                        >
+                          Sun: {breakdown.sundayHours}h
+                        </span>
+                      )}
+                      {breakdown && breakdown.bankHolidayHours > 0 && (
+                        <span
+                          className="enhancement-micro-badge"
+                          style={{ background: '#fffbeb', color: '#92400e' }}
+                        >
+                          BH: {breakdown.bankHolidayHours}h
+                        </span>
+                      )}
+                      {breakdown && breakdown.plainDayHours > 0 && (
+                        <span
+                          className="enhancement-micro-badge"
+                          style={{ background: '#eff6ff', color: 'var(--nhs-blue)' }}
+                        >
+                          Day: {breakdown.plainDayHours}h
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </td>
                 <td className="text-right">
                   <div style={{ display: 'inline-flex', gap: '0.35rem' }}>

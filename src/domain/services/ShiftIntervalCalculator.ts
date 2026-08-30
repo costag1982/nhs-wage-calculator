@@ -43,6 +43,20 @@ export class ShiftIntervalCalculator {
 
     const totalRawMinutes = endTotalMinutes - startTotalMinutes;
     const paidMinutes = Math.max(0, totalRawMinutes - unpaidBreakMinutes);
+
+    // Annual Leave shifts do not accrue calendar unsocial enhancements (Nights, Weekends, Bank Holidays)
+    if (shift.shiftType === 'ANNUAL_LEAVE') {
+      const leaveHours = roundHours(paidMinutes / MINUTES_PER_HOUR);
+      return {
+        totalWorkedHours: leaveHours,
+        plainDayHours: leaveHours,
+        nightHours: 0,
+        saturdayHours: 0,
+        sundayHours: 0,
+        bankHolidayHours: 0,
+      };
+    }
+
     const breakRatio = totalRawMinutes > 0 ? paidMinutes / totalRawMinutes : 0;
 
     let bankHolidayMinutes = 0;

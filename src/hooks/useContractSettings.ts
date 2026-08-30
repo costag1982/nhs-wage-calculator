@@ -13,6 +13,8 @@ export const DEFAULT_GEMMA_PROFILE: EmployeeProfile = {
   fullTimeSalaryFte: 25272.0,
   standardFullTimeHours: 37.5,
   contractedWeeklyHours: 26.0,
+  yearsOfServiceTier: 'UNDER_5',
+  annualLeaveCarryOverHours: 0,
   taxCode: '1257L CUMUL',
   niCategory: 'A',
   pensionContributionRate: 0.065,
@@ -70,7 +72,9 @@ export function useContractSettings(onMutation?: () => void) {
     (updated: Partial<EmployeeProfile>) => {
       setProfile((prev) => {
         const next = { ...prev, ...updated };
-        SqliteStorage.saveProfile(next);
+        SqliteStorage.saveProfile(next).catch((err) => {
+          console.error('Failed to save profile to SQLite', err);
+        });
         onMutation?.();
         return next;
       });
@@ -86,7 +90,9 @@ export function useContractSettings(onMutation?: () => void) {
       };
       setCommitments((prev) => {
         const next = [...prev, newCommitment];
-        SqliteStorage.saveCommitment(newCommitment);
+        SqliteStorage.saveCommitment(newCommitment).catch((err) => {
+          console.error('Failed to save commitment to SQLite', err);
+        });
         onMutation?.();
         return next;
       });
@@ -98,7 +104,9 @@ export function useContractSettings(onMutation?: () => void) {
     (id: string) => {
       setCommitments((prev) => {
         const next = prev.filter((c) => c.id !== id);
-        SqliteStorage.deleteCommitment(id);
+        SqliteStorage.deleteCommitment(id).catch((err) => {
+          console.error('Failed to delete commitment from SQLite', err);
+        });
         onMutation?.();
         return next;
       });
@@ -109,9 +117,13 @@ export function useContractSettings(onMutation?: () => void) {
   const resetToGemmaDefaults = useCallback(() => {
     setProfile(DEFAULT_GEMMA_PROFILE);
     setCommitments(DEFAULT_GEMMA_COMMITMENTS);
-    SqliteStorage.saveProfile(DEFAULT_GEMMA_PROFILE);
+    SqliteStorage.saveProfile(DEFAULT_GEMMA_PROFILE).catch((err) => {
+      console.error('Failed to save default profile to SQLite', err);
+    });
     for (const comm of DEFAULT_GEMMA_COMMITMENTS) {
-      SqliteStorage.saveCommitment(comm);
+      SqliteStorage.saveCommitment(comm).catch((err) => {
+        console.error('Failed to save default commitment to SQLite', err);
+      });
     }
     onMutation?.();
   }, [onMutation]);

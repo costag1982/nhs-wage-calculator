@@ -140,6 +140,7 @@ export const App: React.FC = () => {
   } = useContractSettings(handleAutoSync);
 
   const {
+    allShifts,
     monthShifts,
     addShift,
     updateShift,
@@ -371,7 +372,8 @@ export const App: React.FC = () => {
         isOpen={isShiftModalOpen}
         selectedDate={modalSelectedDate}
         initialShift={editingShift}
-        existingShifts={monthShifts}
+        existingShifts={allShifts}
+        profile={profile}
         hourlyRate={payslipSummary.hourlyRate}
         defaultProfileBand={profile.band}
         onClose={() => setIsShiftModalOpen(false)}

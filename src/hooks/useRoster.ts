@@ -90,7 +90,9 @@ export function useRoster(activeMonthDate: Date, onMutation?: () => void) {
         const shiftId =
           existingIndex !== -1
             ? prev[existingIndex].id
-            : `shift-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
+            : typeof crypto !== 'undefined' && crypto.randomUUID
+              ? crypto.randomUUID()
+              : `shift-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
 
         const newShift: Shift = {
           ...shiftData,
@@ -106,7 +108,9 @@ export function useRoster(activeMonthDate: Date, onMutation?: () => void) {
             ? prev.map((s, idx) => (idx === existingIndex ? newShift : s))
             : [...prev, newShift];
 
-        SqliteStorage.saveShift(newShift);
+        SqliteStorage.saveShift(newShift).catch((err) => {
+          console.error('Failed to save shift to SQLite storage', err);
+        });
         onMutation?.();
         return next;
       });
@@ -124,7 +128,9 @@ export function useRoster(activeMonthDate: Date, onMutation?: () => void) {
             ...merged,
             breakdown: ShiftIntervalCalculator.calculateBreakdown(merged),
           };
-          SqliteStorage.saveShift(withBreakdown);
+          SqliteStorage.saveShift(withBreakdown).catch((err) => {
+            console.error('Failed to update shift in SQLite', err);
+          });
           onMutation?.();
           return withBreakdown;
         })
@@ -136,7 +142,9 @@ export function useRoster(activeMonthDate: Date, onMutation?: () => void) {
   const deleteShift = useCallback(
     (id: string) => {
       setAllShifts((prev) => prev.filter((s) => s.id !== id));
-      SqliteStorage.deleteShift(id);
+      SqliteStorage.deleteShift(id).catch((err) => {
+        console.error('Failed to delete shift from SQLite', err);
+      });
       onMutation?.();
     },
     [onMutation]
@@ -144,7 +152,9 @@ export function useRoster(activeMonthDate: Date, onMutation?: () => void) {
 
   const clearMonthShifts = useCallback(() => {
     setAllShifts((prev) => prev.filter((s) => !s.date.startsWith(currentMonthPrefix)));
-    SqliteStorage.clearMonthShifts(currentMonthPrefix);
+    SqliteStorage.clearMonthShifts(currentMonthPrefix).catch((err) => {
+      console.error('Failed to clear month shifts in SQLite', err);
+    });
     onMutation?.();
   }, [currentMonthPrefix, onMutation]);
 

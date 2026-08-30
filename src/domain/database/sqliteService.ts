@@ -101,6 +101,18 @@ class SqliteStorage {
     } catch {
       // Column already exists
     }
+    try {
+      db.run(
+        "ALTER TABLE employee_profile ADD COLUMN years_of_service_tier TEXT DEFAULT 'UNDER_5'"
+      );
+    } catch {
+      // Column already exists
+    }
+    try {
+      db.run('ALTER TABLE employee_profile ADD COLUMN al_carry_over_hours REAL DEFAULT 0');
+    } catch {
+      // Column already exists
+    }
 
     // Check if profile exists, if not seed with default Gemma profile
     const profileRes = db.exec('SELECT COUNT(*) as count FROM employee_profile');
@@ -238,7 +250,7 @@ class SqliteStorage {
   public static async getProfile(): Promise<EmployeeProfile> {
     const db = await this.getDb();
     const res = db.exec(
-      'SELECT employee_name, job_title, department, location, band, contract_type, full_time_salary_fte, standard_full_time_hours, contracted_weekly_hours, custom_hourly_rate, tax_code, ni_category, pension_contribution_rate, tax_office_name, tax_office_ref, ni_number, employee_number, pay_method FROM employee_profile WHERE id = 1'
+      'SELECT employee_name, job_title, department, location, band, contract_type, full_time_salary_fte, standard_full_time_hours, contracted_weekly_hours, custom_hourly_rate, tax_code, ni_category, pension_contribution_rate, tax_office_name, tax_office_ref, ni_number, employee_number, pay_method, years_of_service_tier, al_carry_over_hours FROM employee_profile WHERE id = 1'
     );
     if (!res || res.length === 0 || res[0].values.length === 0) {
       return DEFAULT_GEMMA_PROFILE;
@@ -264,6 +276,8 @@ class SqliteStorage {
       niNumber: row[15] as string,
       employeeNumber: row[16] as string,
       payMethod: row[17] as string,
+      yearsOfServiceTier: (row[18] as EmployeeProfile['yearsOfServiceTier']) || 'UNDER_5',
+      annualLeaveCarryOverHours: (row[19] as number) || 0,
     };
   }
 
@@ -279,8 +293,9 @@ class SqliteStorage {
         id, employee_name, job_title, department, location, band, contract_type,
         full_time_salary_fte, standard_full_time_hours, contracted_weekly_hours,
         custom_hourly_rate, tax_code, ni_category, pension_contribution_rate,
-        tax_office_name, tax_office_ref, ni_number, employee_number, pay_method
-      ) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        tax_office_name, tax_office_ref, ni_number, employee_number, pay_method,
+        years_of_service_tier, al_carry_over_hours
+      ) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         profile.employeeName,
         profile.jobTitle,
@@ -300,6 +315,8 @@ class SqliteStorage {
         profile.niNumber,
         profile.employeeNumber,
         profile.payMethod,
+        profile.yearsOfServiceTier || 'UNDER_5',
+        profile.annualLeaveCarryOverHours || 0,
       ]
     );
   }

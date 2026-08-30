@@ -32,8 +32,10 @@ export interface PayslipSummary {
   grossPay: number;
   pensionablePay: number;
   taxablePay: number;
+  annualLeaveHours?: number; // Total annual leave hours recorded in this roster month
 
   // Additional Hours & Overtime (substantive contracts only)
+
   additionalHours?: number; // Hours above contracted, up to FTE threshold (plain time)
   additionalHoursPay?: number;
   overtimeHours?: number; // Hours above FTE threshold — 1.5× (Bands 1–7 only)

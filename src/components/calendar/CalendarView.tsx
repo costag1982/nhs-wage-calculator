@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { Shift } from '../../domain/models/Shift';
 import { getBankHolidayTitle } from '../../domain/constants/bankHolidays';
 import { formatDateIsoParts } from '../../domain/utils/dateUtils';
-import { Moon, Sun } from 'lucide-react';
+import { Moon, Sun, Palmtree } from 'lucide-react';
 
 interface CalendarViewProps {
   activeMonthDate: Date;
@@ -147,13 +147,15 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
               <div className="shift-badge-container">
                 {dayShifts.map((shift) => {
                   const breakdown = shift.breakdown;
+                  const isLeave = shift.shiftType === 'ANNUAL_LEAVE';
                   const isNight = (breakdown?.nightHours || 0) > 4;
                   const isSunday = (breakdown?.sundayHours || 0) > 0;
                   const isSaturday = (breakdown?.saturdayHours || 0) > 0;
                   const isHoliday = (breakdown?.bankHolidayHours || 0) > 0;
 
                   let pillClass = 'shift-pill-day';
-                  if (isHoliday) pillClass = 'shift-pill-holiday';
+                  if (isLeave) pillClass = 'shift-pill-leave';
+                  else if (isHoliday) pillClass = 'shift-pill-holiday';
                   else if (isSunday) pillClass = 'shift-pill-weekend';
                   else if (isSaturday) pillClass = 'shift-pill-weekend';
                   else if (isNight) pillClass = 'shift-pill-night';
@@ -166,14 +168,22 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                         e.stopPropagation();
                         onEditShift(shift);
                       }}
-                      title="Click to edit shift"
+                      title="Click to edit"
                     >
                       <div className="shift-pill-title">
                         <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          {isNight ? <Moon size={12} /> : <Sun size={12} />}
-                          {shift.presetType
-                            ? shift.presetType.replace('_', ' ')
-                            : `${shift.startTime}-${shift.endTime}`}
+                          {isLeave ? (
+                            <Palmtree size={12} />
+                          ) : isNight ? (
+                            <Moon size={12} />
+                          ) : (
+                            <Sun size={12} />
+                          )}
+                          {isLeave
+                            ? 'Annual Leave'
+                            : shift.presetType
+                              ? shift.presetType.replace('_', ' ')
+                              : `${shift.startTime}-${shift.endTime}`}
                         </span>
                         <span className="tabular-nums font-bold">
                           {breakdown?.totalWorkedHours}h
@@ -184,6 +194,19 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                       </div>
 
                       <div className="shift-pill-tags">
+                        {isLeave && (
+                          <span
+                            className="enhancement-micro-badge"
+                            style={{
+                              background: '#dcfce7',
+                              color: '#15803d',
+                              borderColor: '#bbf7d0',
+                              fontWeight: 700,
+                            }}
+                          >
+                            🌴 Paid Leave
+                          </span>
+                        )}
                         {shift.shiftType === 'BANK' && (
                           <span
                             className="enhancement-micro-badge"
@@ -210,22 +233,22 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                             {shift.overrideBand}
                           </span>
                         )}
-                        {breakdown && breakdown.nightHours > 0 && (
+                        {!isLeave && breakdown && breakdown.nightHours > 0 && (
                           <span className="enhancement-micro-badge">
                             🌙 {breakdown.nightHours}h
                           </span>
                         )}
-                        {breakdown && breakdown.saturdayHours > 0 && (
+                        {!isLeave && breakdown && breakdown.saturdayHours > 0 && (
                           <span className="enhancement-micro-badge">
                             Sat {breakdown.saturdayHours}h
                           </span>
                         )}
-                        {breakdown && breakdown.sundayHours > 0 && (
+                        {!isLeave && breakdown && breakdown.sundayHours > 0 && (
                           <span className="enhancement-micro-badge">
                             Sun {breakdown.sundayHours}h
                           </span>
                         )}
-                        {breakdown && breakdown.bankHolidayHours > 0 && (
+                        {!isLeave && breakdown && breakdown.bankHolidayHours > 0 && (
                           <span
                             className="enhancement-micro-badge"
                             style={{
@@ -237,29 +260,30 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                             Bank Hol {breakdown.bankHolidayHours}h
                           </span>
                         )}
-                        {shift.unpaidBreakMinutes > 0 ? (
-                          <span
-                            className="enhancement-micro-badge"
-                            style={{
-                              background: '#f0fdf4',
-                              color: '#15803d',
-                              borderColor: '#bbf7d0',
-                            }}
-                          >
-                            ☕ {shift.unpaidBreakMinutes}m break
-                          </span>
-                        ) : (
-                          <span
-                            className="enhancement-micro-badge"
-                            style={{
-                              background: '#fafafa',
-                              color: '#6b7280',
-                              borderColor: '#e5e7eb',
-                            }}
-                          >
-                            No break
-                          </span>
-                        )}
+                        {!isLeave &&
+                          (shift.unpaidBreakMinutes > 0 ? (
+                            <span
+                              className="enhancement-micro-badge"
+                              style={{
+                                background: '#f0fdf4',
+                                color: '#15803d',
+                                borderColor: '#bbf7d0',
+                              }}
+                            >
+                              ☕ {shift.unpaidBreakMinutes}m break
+                            </span>
+                          ) : (
+                            <span
+                              className="enhancement-micro-badge"
+                              style={{
+                                background: '#fafafa',
+                                color: '#6b7280',
+                                borderColor: '#e5e7eb',
+                              }}
+                            >
+                              No break
+                            </span>
+                          ))}
                       </div>
                     </div>
                   );

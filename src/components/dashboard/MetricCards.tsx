@@ -123,6 +123,18 @@ export const MetricCards: React.FC<MetricCardsProps> = ({ summary }) => {
           {isOverContracted
             ? `${formatHours(workedHours - contractedHours)}h above monthly contracted equivalent`
             : `${formatHours(contractedHours - workedHours)}h remaining this month`}
+          {summary.annualLeaveHours !== undefined && summary.annualLeaveHours > 0 && (
+            <span
+              style={{
+                display: 'block',
+                color: 'var(--emerald)',
+                marginTop: '2px',
+                fontWeight: 600,
+              }}
+            >
+              🌴 {formatHours(summary.annualLeaveHours)}h Annual Leave taken this month
+            </span>
+          )}
         </div>
       </div>
 
