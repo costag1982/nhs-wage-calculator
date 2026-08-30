@@ -332,5 +332,29 @@ describe('NHS Annual Leave & Entitlement (AfC Section 13)', () => {
       expect(result.enhancementsTotal).toBe(0);
       expect(result.payLineItems.find((p) => p.description.includes('Sunday EN'))).toBeUndefined();
     });
+
+    it('correctly handles Half Day (3.75h) annual leave booking in monthly balance calculation', () => {
+      const shifts: Shift[] = [
+        {
+          id: 'al-half',
+          date: '2026-06-15',
+          startTime: '08:00',
+          endTime: '11:45',
+          unpaidBreakMinutes: 0,
+          shiftType: 'ANNUAL_LEAVE',
+          presetType: 'ANNUAL_LEAVE_HALF',
+        },
+      ];
+
+      const balance = AnnualLeaveCalculator.calculateLeaveBalance(
+        gemmaProfile,
+        shifts,
+        new Date(2026, 5, 1)
+      );
+
+      expect(balance.takenThisMonthHours).toBe(3.75);
+      expect(balance.takenYearToDateHours).toBe(3.75);
+      expect(balance.remainingHours).toBe(178.25); // 182.0 - 3.75 = 178.25
+    });
   });
 });

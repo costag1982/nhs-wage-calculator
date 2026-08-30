@@ -15,7 +15,8 @@ import { ShiftTemplatePicker } from './shift-modal/ShiftTemplatePicker';
 import { ShiftTimeInputs } from './shift-modal/ShiftTimeInputs';
 import { ShiftBandSelector } from './shift-modal/ShiftBandSelector';
 import { ShiftBreakdownPreview } from './shift-modal/ShiftBreakdownPreview';
-import { X, Trash2, Check, Sparkles, AlertTriangle } from 'lucide-react';
+import { SHIFT_PRESETS, ANNUAL_LEAVE_PRESETS } from './shift-modal/shiftModalConstants';
+import { X, Trash2, Check, Sparkles, AlertTriangle, Info } from 'lucide-react';
 
 export { ShiftImpactCalculator, calculateShiftGrossImpact };
 export type { ShiftGrossImpact };
@@ -58,7 +59,8 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
     initialShift?.shiftType || 'SUBSTANTIVE'
   );
   const [presetType, setPresetType] = useState<ShiftPresetType>(
-    initialShift?.presetType || (initialShift?.shiftType === 'ANNUAL_LEAVE' ? 'CUSTOM' : 'TWILIGHT')
+    initialShift?.presetType ||
+      (initialShift?.shiftType === 'ANNUAL_LEAVE' ? 'ANNUAL_LEAVE_FULL' : 'TWILIGHT')
   );
   const [startTime, setStartTime] = useState<string>(
     initialShift?.startTime || (shiftType === 'ANNUAL_LEAVE' ? '08:00' : '22:00')
@@ -98,7 +100,7 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
   const handleSwitchShiftType = (newType: ShiftWorkType) => {
     setShiftType(newType);
     if (newType === 'ANNUAL_LEAVE') {
-      setPresetType('CUSTOM');
+      setPresetType('ANNUAL_LEAVE_FULL');
       setStartTime('08:00');
       setEndTime('15:30');
       setUnpaidBreakMinutes(0);
@@ -282,11 +284,23 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
 
             <ShiftTypeSelector shiftType={shiftType} onSelectType={handleSwitchShiftType} />
 
-            {shiftType !== 'ANNUAL_LEAVE' && (
-              <ShiftTemplatePicker presetType={presetType} onSelectPreset={handleSelectPreset} />
+            {shiftType !== 'ANNUAL_LEAVE' ? (
+              <ShiftTemplatePicker
+                presetType={presetType}
+                presets={SHIFT_PRESETS}
+                label="Shift Template"
+                onSelectPreset={handleSelectPreset}
+              />
+            ) : (
+              <ShiftTemplatePicker
+                presetType={presetType}
+                presets={ANNUAL_LEAVE_PRESETS}
+                label="Leave Duration"
+                onSelectPreset={handleSelectPreset}
+              />
             )}
 
-            {(shiftType === 'ANNUAL_LEAVE' || presetType === 'CUSTOM') && (
+            {presetType === 'CUSTOM' && (
               <ShiftTimeInputs
                 startTime={startTime}
                 endTime={endTime}
@@ -294,6 +308,30 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
                 onStartTimeChange={setStartTime}
                 onEndTimeChange={setEndTime}
               />
+            )}
+
+            {shiftType === 'ANNUAL_LEAVE' && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '0.4rem',
+                  padding: '0.55rem 0.75rem',
+                  background: '#f0fdf4',
+                  border: '1px solid #bbf7d0',
+                  borderRadius: 'var(--radius-md)',
+                  fontSize: '0.75rem',
+                  color: '#166534',
+                  lineHeight: 1.4,
+                }}
+              >
+                <Info size={14} style={{ marginTop: '2px', flexShrink: 0 }} />
+                <span>
+                  <strong>NHS AfC Leave Rule:</strong> 1 full day of leave ={' '}
+                  <strong>7.5 hours</strong> (half day = <strong>3.75 hours</strong>). Regular
+                  non-working <strong>Days Off (DO)</strong> do not need to be booked as leave.
+                </span>
+              </div>
             )}
 
             {shiftType !== 'ANNUAL_LEAVE' && (

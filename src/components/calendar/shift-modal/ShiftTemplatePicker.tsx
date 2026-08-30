@@ -4,18 +4,22 @@ import { SHIFT_PRESETS } from './shiftModalConstants';
 
 interface ShiftTemplatePickerProps {
   presetType: ShiftPresetType;
+  presets?: ShiftPreset[];
+  label?: string;
   onSelectPreset: (preset: ShiftPreset) => void;
 }
 
 export const ShiftTemplatePicker: React.FC<ShiftTemplatePickerProps> = ({
   presetType,
+  presets = SHIFT_PRESETS,
+  label = 'Shift Template',
   onSelectPreset,
 }) => {
   return (
     <div className="form-group">
-      <label className="form-label">Shift Template</label>
+      <label className="form-label">{label}</label>
       <div className="preset-buttons-grid">
-        {SHIFT_PRESETS.map((preset) => (
+        {presets.map((preset) => (
           <button
             key={preset.id}
             type="button"

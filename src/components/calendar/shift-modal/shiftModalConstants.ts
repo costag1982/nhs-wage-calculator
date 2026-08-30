@@ -51,6 +51,33 @@ export const SHIFT_PRESETS: ShiftPreset[] = [
   },
 ];
 
+export const ANNUAL_LEAVE_PRESETS: ShiftPreset[] = [
+  {
+    id: 'ANNUAL_LEAVE_FULL',
+    label: 'Full Day (7.5h)',
+    startTime: '08:00',
+    endTime: '15:30',
+    unpaidBreakMinutes: 0,
+    description: 'Standard NHS full day (7.5 hrs)',
+  },
+  {
+    id: 'ANNUAL_LEAVE_HALF',
+    label: 'Half Day (3.75h)',
+    startTime: '08:00',
+    endTime: '11:45',
+    unpaidBreakMinutes: 0,
+    description: 'Standard NHS half day (3.75 hrs)',
+  },
+  {
+    id: 'CUSTOM',
+    label: 'Custom Hours',
+    startTime: '08:00',
+    endTime: '15:30',
+    unpaidBreakMinutes: 0,
+    description: 'Enter specific leave duration',
+  },
+];
+
 export const BAND_OVERRIDE_OPTIONS = [
   { band: 'Band 2', label: 'Band 2 (£12.92/hr)' },
   { band: 'Band 3', label: 'Band 3 (£13.55/hr - Higher Band / Acting Up)' },
