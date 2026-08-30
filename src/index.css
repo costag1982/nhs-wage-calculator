@@ -534,8 +534,14 @@ button {
 }
 
 .calendar-day-cell.other-month {
-  background: #fbfcfe;
-  opacity: 0.45;
+  background: #f8fafc;
+  opacity: 0.35;
+  cursor: not-allowed;
+  user-select: none;
+}
+
+.calendar-day-cell.other-month:hover {
+  background: #f8fafc;
 }
 
 .calendar-day-cell.is-today {

@@ -126,7 +126,14 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
               className={`calendar-day-cell ${!cell.isCurrentMonth ? 'other-month' : ''} ${
                 cell.isWeekend ? 'is-weekend' : ''
               } ${isToday ? 'is-today' : ''}`}
+              title={
+                !cell.isCurrentMonth
+                  ? 'Use the month navigation above to view and add shifts for this date'
+                  : undefined
+              }
+              aria-disabled={!cell.isCurrentMonth}
               onClick={() => {
+                if (!cell.isCurrentMonth) return;
                 if (dayShifts.length > 0) {
                   onEditShift(dayShifts[0]);
                 } else {
