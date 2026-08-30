@@ -917,8 +917,11 @@ button {
 }
 
 .form-input,
-.form-select {
-  padding: 0.45rem 0.65rem;
+.form-select,
+.form-input-display {
+  height: 34px;
+  box-sizing: border-box;
+  padding: 0 0.65rem;
   border: 1px solid var(--border-medium);
   border-radius: var(--radius-sm);
   font-size: 0.8125rem;
@@ -928,6 +931,16 @@ button {
     border-color 0.15s ease,
     box-shadow 0.15s ease,
     background-color 0.15s ease;
+}
+
+.form-input-display {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #15803d;
+  font-weight: 700;
 }
 
 .form-select {

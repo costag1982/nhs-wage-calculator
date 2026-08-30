@@ -65,25 +65,11 @@ export const AnnualLeaveSection: React.FC<AnnualLeaveSectionProps> = ({
 
           <div className="form-group">
             <label className="form-label">Calculated Entitlement</label>
-            <div
-              style={{
-                minHeight: '34px',
-                padding: '0.45rem 0.65rem',
-                background: '#f0fdf4',
-                border: '1px solid #bbf7d0',
-                borderRadius: 'var(--radius-sm)',
-                fontSize: '0.8125rem',
-                fontWeight: 700,
-                color: '#15803d',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
+            <div className="form-input-display">
               <span style={{ fontSize: '0.75rem', color: '#166534', fontWeight: 600 }}>
                 Total Pot:
               </span>
-              <span style={{ fontFamily: 'var(--font-heading)', fontSize: '0.9375rem' }}>
+              <span style={{ fontFamily: 'var(--font-heading)', fontSize: '0.875rem' }}>
                 {leaveEntitlement.totalEntitlementHours} hrs
               </span>
             </div>
