@@ -15,6 +15,8 @@ import {
   Database,
   Download,
   Upload,
+  Lock,
+  LogOut,
 } from 'lucide-react';
 
 interface SettingsDrawerProps {
@@ -28,6 +30,7 @@ interface SettingsDrawerProps {
   onResetDefaults: () => void;
   onExportSqlite: () => void;
   onImportSqlite: (file: File) => void;
+  onLogout?: () => void;
 }
 
 export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
@@ -41,6 +44,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
   onResetDefaults,
   onExportSqlite,
   onImportSqlite,
+  onLogout,
 }) => {
   const [newCommitmentName, setNewCommitmentName] = useState('');
   const [newCommitmentAmount, setNewCommitmentAmount] = useState('');
@@ -419,6 +423,49 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
               </div>
             </div>
           </div>
+
+          {/* Security & Access Session */}
+          {onLogout && (
+            <div>
+              <div className="settings-section-title">
+                <Lock size={16} style={{ display: 'inline', marginRight: '6px' }} />
+                Security & Session
+              </div>
+
+              <div
+                style={{
+                  background: 'var(--bg-app)',
+                  border: '1px solid var(--border-light)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '1rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.75rem',
+                }}
+              >
+                <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
+                  Lock this session and return to the authorisation screen. This will clear the cached
+                  passphrase from this device.
+                </p>
+
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{
+                    fontSize: '0.8125rem',
+                    color: 'var(--rose)',
+                    borderColor: 'var(--rose-border)',
+                    alignSelf: 'flex-start',
+                  }}
+                  onClick={onLogout}
+                  title="Log out and lock calculator"
+                >
+                  <LogOut size={14} />
+                  Log Out & Lock Screen
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         <div

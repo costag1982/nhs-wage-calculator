@@ -18,6 +18,7 @@ import {
   ChevronLeft,
   ChevronRight,
   RotateCcw,
+  LogOut,
 } from 'lucide-react';
 
 type TabView = 'CALENDAR' | 'LIST' | 'PAYSLIP';
@@ -186,6 +187,12 @@ export const App: React.FC = () => {
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('__calc_auth_pass');
+    sessionStorage.removeItem('__calc_auth_pass');
+    window.location.reload();
+  };
+
   return (
     <div className="app-container">
       {/* Top Application Header */}
@@ -238,6 +245,17 @@ export const App: React.FC = () => {
           >
             <Settings size={16} />
             Settings
+          </button>
+
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={handleLogout}
+            title="Log out and lock calculator"
+            style={{ color: 'var(--rose)' }}
+          >
+            <LogOut size={16} />
+            Log Out
           </button>
         </div>
       </header>
@@ -337,6 +355,7 @@ export const App: React.FC = () => {
         onResetDefaults={resetToGemmaDefaults}
         onExportSqlite={exportSqliteDatabase}
         onImportSqlite={importSqliteDatabase}
+        onLogout={handleLogout}
       />
     </div>
   );
