@@ -12,13 +12,13 @@ export const TaxPensionSection: React.FC<TaxPensionSectionProps> = ({
   onUpdateProfile,
 }) => {
   return (
-    <div>
+    <div className="settings-section-card">
       <div className="settings-section-title">
-        <Percent size={16} style={{ display: 'inline', marginRight: '6px' }} />
-        Tax, National Insurance & Pension
+        <Percent size={17} />
+        <span>Tax, National Insurance & Pension</span>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
         <div className="form-row">
           <div className="form-group">
             <label className="form-label" htmlFor="settings-tax-code">

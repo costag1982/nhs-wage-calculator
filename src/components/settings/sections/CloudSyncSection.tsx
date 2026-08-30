@@ -51,10 +51,10 @@ export const CloudSyncSection: React.FC<CloudSyncSectionProps> = ({
   };
 
   return (
-    <div>
+    <div className="settings-section-card">
       <div className="settings-section-title">
-        <Cloud size={16} style={{ display: 'inline', marginRight: '6px' }} />
-        Cloud Backup & Multi-Device Synchronisation
+        <Cloud size={17} />
+        <span>Cloud Backup & Multi-Device Sync</span>
       </div>
 
       <div

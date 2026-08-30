@@ -28,10 +28,10 @@ export const CommitmentsSection: React.FC<CommitmentsSectionProps> = ({
   };
 
   return (
-    <div>
+    <div className="settings-section-card">
       <div className="settings-section-title">
-        <Building size={16} style={{ display: 'inline', marginRight: '6px' }} />
-        Recurring Commitments & Voluntary Deductions
+        <Building size={17} />
+        <span>Recurring Deductions & Commitments</span>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>

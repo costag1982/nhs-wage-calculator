@@ -1275,7 +1275,7 @@ input[type='time']::-webkit-calendar-picker-indicator:hover {
 .drawer-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.5);
+  background: rgba(15, 23, 42, 0.55);
   backdrop-filter: blur(4px);
   z-index: 1000;
   display: flex;
@@ -1283,13 +1283,14 @@ input[type='time']::-webkit-calendar-picker-indicator:hover {
 }
 
 .drawer-panel {
-  background: #ffffff;
+  background: var(--bg-app);
   width: 100%;
-  max-width: 520px;
+  max-width: 560px;
   height: 100%;
-  box-shadow: var(--shadow-xl);
+  box-shadow: -8px 0 32px rgba(15, 23, 42, 0.18);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   animation: drawerSlide 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -1304,29 +1305,65 @@ input[type='time']::-webkit-calendar-picker-indicator:hover {
 
 .drawer-header {
   padding: 1.25rem 1.5rem;
+  background: #ffffff;
   border-bottom: 1px solid var(--border-light);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-shrink: 0;
+  z-index: 10;
 }
 
 .drawer-body {
-  padding: 1.5rem;
+  padding: 1.25rem 1.5rem 3.5rem 1.5rem;
   overflow-y: auto;
-  flex: 1;
+  overscroll-behavior: contain;
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1.25rem;
+}
+
+.drawer-footer {
+  padding: 1.1rem 1.5rem;
+  background: #ffffff;
+  border-top: 1px solid var(--border-light);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-shrink: 0;
+  z-index: 10;
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.03);
+}
+
+.settings-section-card {
+  background: #ffffff;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-xs);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .settings-section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
   font-family: var(--font-heading);
-  font-size: 1rem;
+  font-size: 0.9375rem;
   font-weight: 700;
   color: var(--text-main);
   border-bottom: 1px solid var(--border-light);
-  padding-bottom: 0.5rem;
-  margin-bottom: 0.75rem;
+  padding-bottom: 0.65rem;
+  margin-bottom: 0;
+}
+
+.settings-section-title svg {
+  color: var(--nhs-blue);
+  flex-shrink: 0;
 }
 
 /* Print Styling */

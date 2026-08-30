@@ -103,16 +103,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
           {onLogout && <SecuritySection onLogout={onLogout} />}
         </div>
 
-        <div
-          style={{
-            padding: '1.25rem 1.5rem',
-            borderTop: '1px solid var(--border-light)',
-            background: 'var(--bg-app)',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
+        <div className="drawer-footer">
           <button
             type="button"
             className="btn btn-secondary"

@@ -16,13 +16,13 @@ export const AnnualLeaveSection: React.FC<AnnualLeaveSectionProps> = ({
   const leaveEntitlement = calculateAnnualLeaveEntitlement(profile);
 
   return (
-    <div>
+    <div className="settings-section-card">
       <div className="settings-section-title">
-        <Palmtree size={16} style={{ display: 'inline', marginRight: '6px' }} />
-        NHS Annual Leave Entitlement (AfC Section 13)
+        <Palmtree size={17} />
+        <span>NHS Annual Leave (AfC Section 13)</span>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
         <div className="form-group">
           <label className="form-label" htmlFor="settings-leave-tier">
             Continuous NHS Service Tier
@@ -37,7 +37,7 @@ export const AnnualLeaveSection: React.FC<AnnualLeaveSectionProps> = ({
           >
             {Object.values(NHS_LEAVE_TIERS).map((t) => (
               <option key={t.tier} value={t.tier}>
-                {t.label} ({t.description})
+                {t.label} ({t.annualLeaveDays}d Leave + {t.bankHolidayDays}d Bank Holidays)
               </option>
             ))}
           </select>
@@ -46,7 +46,7 @@ export const AnnualLeaveSection: React.FC<AnnualLeaveSectionProps> = ({
         <div className="form-row">
           <div className="form-group">
             <label className="form-label" htmlFor="settings-carry-over">
-              Annual Leave Carry-Over (Hours)
+              Carry-Over (Hours)
             </label>
             <input
               id="settings-carry-over"
@@ -64,53 +64,67 @@ export const AnnualLeaveSection: React.FC<AnnualLeaveSectionProps> = ({
           </div>
 
           <div className="form-group">
-            <label className="form-label">Calculated Annual Entitlement</label>
+            <label className="form-label">Calculated Entitlement</label>
             <div
               style={{
-                padding: '0.6rem 0.75rem',
-                background: 'var(--bg-card-subtle)',
-                border: '1px solid var(--border-light)',
-                borderRadius: 'var(--radius-md)',
-                fontSize: '0.875rem',
+                minHeight: '34px',
+                padding: '0.45rem 0.65rem',
+                background: '#f0fdf4',
+                border: '1px solid #bbf7d0',
+                borderRadius: 'var(--radius-sm)',
+                fontSize: '0.8125rem',
                 fontWeight: 700,
-                color: 'var(--emerald)',
+                color: '#15803d',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
               }}
             >
-              <span>Total Pot:</span>
-              <span>{leaveEntitlement.totalEntitlementHours} hrs</span>
+              <span style={{ fontSize: '0.75rem', color: '#166534', fontWeight: 600 }}>
+                Total Pot:
+              </span>
+              <span style={{ fontFamily: 'var(--font-heading)', fontSize: '0.9375rem' }}>
+                {leaveEntitlement.totalEntitlementHours} hrs
+              </span>
             </div>
           </div>
         </div>
 
         <div
           style={{
-            background: '#ecfdf5',
-            border: '1px solid #bbf7d0',
+            background: '#f8fafc',
+            border: '1px solid var(--border-light)',
             borderRadius: 'var(--radius-md)',
             padding: '0.75rem 0.85rem',
             fontSize: '0.8125rem',
-            color: '#065f46',
-            lineHeight: 1.4,
+            color: 'var(--text-main)',
+            lineHeight: 1.45,
           }}
         >
-          <div>
-            <strong>Pro-rata AfC Breakdown ({profile.contractedWeeklyHours}h/wk):</strong>
+          <div style={{ fontWeight: 600, color: 'var(--text-main)', marginBottom: '4px' }}>
+            Pro-rata AfC Breakdown ({profile.contractedWeeklyHours}h/wk):
           </div>
-          <div style={{ marginTop: '4px' }}>
-            • Annual Leave: <strong>{leaveEntitlement.annualLeaveHours}h</strong> (
-            {leaveEntitlement.annualLeaveDays} days ×{' '}
+          <div style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>
+            • Annual Leave:{' '}
+            <strong style={{ color: 'var(--text-main)' }}>
+              {leaveEntitlement.annualLeaveHours}h
+            </strong>{' '}
+            ({leaveEntitlement.annualLeaveDays} days ×{' '}
             {((profile.contractedWeeklyHours / 37.5) * 7.5).toFixed(2)}h)
           </div>
-          <div>
-            • General Public Holidays: <strong>{leaveEntitlement.bankHolidayHours}h</strong> (8 Bank
-            Holidays × {((profile.contractedWeeklyHours / 37.5) * 7.5).toFixed(2)}h)
+          <div style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>
+            • Public Holidays:{' '}
+            <strong style={{ color: 'var(--text-main)' }}>
+              {leaveEntitlement.bankHolidayHours}h
+            </strong>{' '}
+            (8 Bank Holidays × {((profile.contractedWeeklyHours / 37.5) * 7.5).toFixed(2)}h)
           </div>
           {leaveEntitlement.carryOverHours > 0 && (
-            <div>
-              • Carried forward: <strong>{leaveEntitlement.carryOverHours}h</strong>
+            <div style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>
+              • Carried Forward:{' '}
+              <strong style={{ color: 'var(--text-main)' }}>
+                {leaveEntitlement.carryOverHours}h
+              </strong>
             </div>
           )}
         </div>

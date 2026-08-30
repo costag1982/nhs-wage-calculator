@@ -12,13 +12,13 @@ export const EmployeeDetailsSection: React.FC<EmployeeDetailsSectionProps> = ({
   onUpdateProfile,
 }) => {
   return (
-    <div>
+    <div className="settings-section-card">
       <div className="settings-section-title">
-        <User size={16} style={{ display: 'inline', marginRight: '6px' }} />
-        Employee & Hospital Details (ESR Header)
+        <User size={17} />
+        <span>Employee & Hospital Details (ESR Header)</span>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
         <div className="form-group">
           <label className="form-label" htmlFor="settings-employee-name">
             Employee Name

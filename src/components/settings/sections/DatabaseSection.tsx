@@ -11,10 +11,10 @@ export const DatabaseSection: React.FC<DatabaseSectionProps> = ({
   onImportSqlite,
 }) => {
   return (
-    <div>
+    <div className="settings-section-card">
       <div className="settings-section-title">
-        <Database size={16} style={{ display: 'inline', marginRight: '6px' }} />
-        SQLite Local Database (Wasm)
+        <Database size={17} />
+        <span>SQLite Local Database (Wasm)</span>
       </div>
 
       <div

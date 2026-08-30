@@ -7,10 +7,10 @@ interface SecuritySectionProps {
 
 export const SecuritySection: React.FC<SecuritySectionProps> = ({ onLogout }) => {
   return (
-    <div>
+    <div className="settings-section-card">
       <div className="settings-section-title">
-        <Lock size={16} style={{ display: 'inline', marginRight: '6px' }} />
-        Security & Session
+        <Lock size={17} />
+        <span>Security & Session</span>
       </div>
 
       <div

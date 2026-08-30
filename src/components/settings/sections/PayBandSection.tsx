@@ -18,13 +18,13 @@ export const PayBandSection: React.FC<PayBandSectionProps> = ({ profile, onUpdat
   };
 
   return (
-    <div>
+    <div className="settings-section-card">
       <div className="settings-section-title">
-        <Landmark size={16} style={{ display: 'inline', marginRight: '6px' }} />
-        NHS Pay Band & Contract
+        <Landmark size={17} />
+        <span>NHS Pay Band & Contract</span>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
         <div className="form-group">
           <label className="form-label" htmlFor="settings-band-select">
             Agenda for Change Band
