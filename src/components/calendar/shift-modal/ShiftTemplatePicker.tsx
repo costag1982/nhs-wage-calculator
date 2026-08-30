@@ -12,23 +12,23 @@ interface ShiftTemplatePickerProps {
 export const ShiftTemplatePicker: React.FC<ShiftTemplatePickerProps> = ({
   presetType,
   presets = SHIFT_PRESETS,
-  label = 'Shift Template',
+  label,
   onSelectPreset,
 }) => {
   return (
-    <div className="form-group">
-      <label className="form-label">{label}</label>
-      <div className="preset-buttons-grid">
+    <div className="form-group" style={{ gap: '0.2rem' }}>
+      {label && <label className="form-label">{label}</label>}
+      <div className="template-chips-grid">
         {presets.map((preset) => (
           <button
             key={preset.id}
             type="button"
-            className={`preset-btn ${presetType === preset.id ? 'active' : ''}`}
+            className={`template-chip ${presetType === preset.id ? 'active' : ''}`}
             onClick={() => onSelectPreset(preset)}
           >
-            <span>{preset.label}</span>
+            <span className="template-chip-label">{preset.label}</span>
             {preset.id !== 'CUSTOM' && (
-              <span className="preset-btn-time">
+              <span className="template-chip-time">
                 {preset.startTime} - {preset.endTime}
               </span>
             )}
