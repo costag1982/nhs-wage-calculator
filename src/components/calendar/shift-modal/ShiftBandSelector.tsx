@@ -62,11 +62,11 @@ export const ShiftBandSelector: React.FC<ShiftBandSelectorProps> = ({
             value={unpaidBreakMinutes}
             onChange={(e) => onUnpaidBreakChange(Number(e.target.value))}
           >
-            <option value={0}>0m (No break)</option>
-            <option value={15}>15m break</option>
-            <option value={30}>30m (NHS break)</option>
-            <option value={45}>45m break</option>
-            <option value={60}>60m (1h break)</option>
+            <option value={0}>0 mins</option>
+            <option value={15}>15 mins</option>
+            <option value={30}>30 mins</option>
+            <option value={45}>45 mins</option>
+            <option value={60}>60 mins</option>
           </select>
         </div>
       </div>
