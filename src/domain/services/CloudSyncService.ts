@@ -70,6 +70,13 @@ export class CloudSyncService {
   }
 
   /**
+   * Returns true if sync credentials were baked in at build-time via GitHub Secrets.
+   */
+  public static isManagedConfig(): boolean {
+    return Boolean(import.meta.env.VITE_SYNC_GIST_TOKEN);
+  }
+
+  /**
    * Records a local modification timestamp so sync knows local state has changed.
    */
   public static recordLocalMutation(): void {

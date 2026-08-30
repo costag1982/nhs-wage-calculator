@@ -442,118 +442,146 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({
                 never lose data across browsers or mobile devices.
               </p>
 
-              <button
-                type="button"
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--nhs-blue)',
-                  fontSize: '0.8125rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  padding: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                }}
-                onClick={() => setIsConfigOpen(!isConfigOpen)}
-              >
-                <Key size={13} />
-                {isConfigOpen ? 'Hide GitHub Connection Settings' : 'Configure GitHub Connection'}
-              </button>
-
-              {isConfigOpen && (
+              {CloudSyncService.isManagedConfig() ? (
                 <div
                   style={{
-                    borderTop: '1px solid var(--border-light)',
-                    paddingTop: '0.75rem',
                     display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.65rem',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    fontSize: '0.75rem',
+                    color: '#15803d',
+                    backgroundColor: '#f0fdf4',
+                    padding: '0.45rem 0.75rem',
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1px solid #bbf7d0',
                   }}
                 >
-                  <div className="form-group">
-                    <label className="form-label" style={{ fontSize: '0.75rem' }}>
-                      GitHub Personal Access Token (with 'gist' permission)
-                    </label>
-                    <input
-                      type="password"
-                      className="form-input"
-                      placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
-                      value={syncToken}
-                      onChange={(e) => setSyncToken(e.target.value)}
-                    />
-                  </div>
+                  <Lock size={13} />
+                  <span>
+                    Securely connected via GitHub Repository Secrets (Automated & Protected)
+                  </span>
+                </div>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: 'var(--nhs-blue)',
+                      fontSize: '0.8125rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      padding: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                    }}
+                    onClick={() => setIsConfigOpen(!isConfigOpen)}
+                  >
+                    <Key size={13} />
+                    {isConfigOpen
+                      ? 'Hide Custom Connection Settings'
+                      : 'Configure Custom Connection'}
+                  </button>
 
-                  <div className="form-group">
-                    <label className="form-label" style={{ fontSize: '0.75rem' }}>
-                      Private Gist ID (Optional - automatically created if left blank)
-                    </label>
-                    <input
-                      type="text"
-                      className="form-input"
-                      placeholder="e.g. 7a3b4c5d6e7f8g9h..."
-                      value={syncGistId}
-                      onChange={(e) => setSyncGistId(e.target.value)}
-                    />
-                  </div>
-
-                  {testResult && (
+                  {isConfigOpen && (
                     <div
                       style={{
-                        padding: '0.5rem 0.75rem',
-                        borderRadius: 'var(--radius-sm)',
-                        fontSize: '0.75rem',
-                        backgroundColor: testResult.success ? '#f0fdf4' : 'var(--rose-light)',
-                        color: testResult.success ? '#15803d' : 'var(--rose)',
-                        border: `1px solid ${testResult.success ? '#bbf7d0' : 'var(--rose-border)'}`,
+                        borderTop: '1px solid var(--border-light)',
+                        paddingTop: '0.75rem',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.65rem',
                       }}
                     >
-                      {testResult.message}
+                      <div className="form-group">
+                        <label className="form-label" style={{ fontSize: '0.75rem' }}>
+                          GitHub Personal Access Token (with 'gist' permission)
+                        </label>
+                        <input
+                          type="password"
+                          className="form-input"
+                          placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                          value={syncToken}
+                          onChange={(e) => setSyncToken(e.target.value)}
+                        />
+                      </div>
+
+                      <div className="form-group">
+                        <label className="form-label" style={{ fontSize: '0.75rem' }}>
+                          Private Gist ID (Optional - automatically created if left blank)
+                        </label>
+                        <input
+                          type="text"
+                          className="form-input"
+                          placeholder="e.g. 7a3b4c5d6e7f8g9h..."
+                          value={syncGistId}
+                          onChange={(e) => setSyncGistId(e.target.value)}
+                        />
+                      </div>
+
+                      {testResult && (
+                        <div
+                          style={{
+                            padding: '0.5rem 0.75rem',
+                            borderRadius: 'var(--radius-sm)',
+                            fontSize: '0.75rem',
+                            backgroundColor: testResult.success ? '#f0fdf4' : 'var(--rose-light)',
+                            color: testResult.success ? '#15803d' : 'var(--rose)',
+                            border: `1px solid ${testResult.success ? '#bbf7d0' : 'var(--rose-border)'}`,
+                          }}
+                        >
+                          {testResult.message}
+                        </div>
+                      )}
+
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button
+                          type="button"
+                          className="btn btn-primary"
+                          style={{ flex: 1, fontSize: '0.8125rem' }}
+                          disabled={isTesting || !syncToken.trim()}
+                          onClick={async () => {
+                            setIsTesting(true);
+                            setTestResult(null);
+                            const res = await CloudSyncService.testConnection(
+                              syncToken,
+                              syncGistId
+                            );
+                            setIsTesting(false);
+                            setTestResult(res);
+                            if (res.success) {
+                              CloudSyncService.saveConfig(syncToken, syncGistId);
+                              onTriggerSync?.();
+                            }
+                          }}
+                        >
+                          {isTesting ? 'Testing...' : 'Save & Connect'}
+                        </button>
+                        {syncToken && (
+                          <button
+                            type="button"
+                            className="btn btn-secondary"
+                            style={{ fontSize: '0.8125rem' }}
+                            onClick={() => {
+                              CloudSyncService.saveConfig('', '');
+                              setSyncToken('');
+                              setSyncGistId('');
+                              setTestResult({
+                                success: true,
+                                message: 'Cloud sync credentials cleared.',
+                              });
+                            }}
+                          >
+                            Disconnect
+                          </button>
+                        )}
+                      </div>
                     </div>
                   )}
-
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button
-                      type="button"
-                      className="btn btn-primary"
-                      style={{ flex: 1, fontSize: '0.8125rem' }}
-                      disabled={isTesting || !syncToken.trim()}
-                      onClick={async () => {
-                        setIsTesting(true);
-                        setTestResult(null);
-                        const res = await CloudSyncService.testConnection(syncToken, syncGistId);
-                        setIsTesting(false);
-                        setTestResult(res);
-                        if (res.success) {
-                          CloudSyncService.saveConfig(syncToken, syncGistId);
-                          onTriggerSync?.();
-                        }
-                      }}
-                    >
-                      {isTesting ? 'Testing...' : 'Save & Connect'}
-                    </button>
-                    {syncToken && (
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        style={{ fontSize: '0.8125rem' }}
-                        onClick={() => {
-                          CloudSyncService.saveConfig('', '');
-                          setSyncToken('');
-                          setSyncGistId('');
-                          setTestResult({
-                            success: true,
-                            message: 'Cloud sync credentials cleared.',
-                          });
-                        }}
-                      >
-                        Disconnect
-                      </button>
-                    )}
-                  </div>
-                </div>
+                </>
               )}
             </div>
           </div>
