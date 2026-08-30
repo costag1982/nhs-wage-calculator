@@ -16,7 +16,6 @@ import {
   List,
   FileText,
   Settings,
-  Plus,
   ChevronLeft,
   ChevronRight,
   RotateCcw,
@@ -263,11 +262,6 @@ export const App: React.FC = () => {
               <ChevronRight size={18} />
             </button>
           </div>
-
-          <button type="button" className="btn btn-primary" onClick={() => handleOpenAddShift()}>
-            <Plus size={16} />
-            Add Shift
-          </button>
 
           <button
             type="button"
