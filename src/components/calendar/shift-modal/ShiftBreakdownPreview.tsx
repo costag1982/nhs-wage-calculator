@@ -2,7 +2,7 @@ import React from 'react';
 import { ShiftWorkType, ShiftHoursBreakdown } from '../../../domain/models/Shift';
 import { NhsBandConfig } from '../../../domain/constants/nhsBands';
 import { ShiftGrossImpact } from '../../../domain/services/ShiftImpactCalculator';
-import { Clock, Coins, Zap } from 'lucide-react';
+import { Zap, Moon, Calendar, Sparkles, Briefcase, Palmtree } from 'lucide-react';
 
 interface ShiftBreakdownPreviewProps {
   shiftType: ShiftWorkType;
@@ -21,214 +21,278 @@ export const ShiftBreakdownPreview: React.FC<ShiftBreakdownPreviewProps> = ({
   bandConfig,
   payslipImpact,
 }) => {
-  return (
-    <div className="shift-preview-box">
-      <div className="shift-preview-header">
-        <div className="shift-preview-title">
-          <Clock size={15} style={{ color: 'var(--nhs-blue)', flexShrink: 0 }} />
-          <span>{shiftType === 'ANNUAL_LEAVE' ? 'Annual Leave Summary' : 'Shift Breakdown'}</span>
-          {shiftType === 'BANK' && (
-            <span
-              style={{
-                fontSize: '0.6875rem',
-                fontWeight: 700,
-                color: '#4338ca',
-                background: '#e0e7ff',
-                padding: '1px 6px',
-                borderRadius: '4px',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              Bank Shift
-            </span>
+  // Annual Leave View
+  if (shiftType === 'ANNUAL_LEAVE') {
+    return (
+      <div className="breakdown-receipt">
+        <div className="breakdown-receipt-header">
+          <span className="breakdown-receipt-title">
+            <Palmtree
+              size={13}
+              style={{ color: '#047857', display: 'inline', marginRight: '4px' }}
+            />
+            Annual Leave (AfC Section 13)
+          </span>
+          <span className="breakdown-tag leave-tag">{breakdown.totalWorkedHours}h Leave</span>
+        </div>
+        <div className="breakdown-receipt-row">
+          <span>Leave Hours Deducted from Pot</span>
+          <span className="tabular-nums font-bold">{breakdown.totalWorkedHours} hrs</span>
+        </div>
+        <div className="breakdown-receipt-total leave-total">
+          <span>Gross Pay Impact</span>
+          <span>Paid in standard monthly salary</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Bank Shift View
+  if (shiftType === 'BANK') {
+    const bankBasePay = breakdown.totalWorkedHours * effectiveRate;
+    const nightPay = breakdown.nightHours * (effectiveRate * bandConfig.nightEnhancementRate);
+    const satPay = breakdown.saturdayHours * (effectiveRate * bandConfig.saturdayEnhancementRate);
+    const sunPay =
+      breakdown.sundayHours * (effectiveRate * bandConfig.sundayAndHolidayEnhancementRate);
+    const bhPay =
+      breakdown.bankHolidayHours * (effectiveRate * bandConfig.sundayAndHolidayEnhancementRate);
+
+    return (
+      <div className="breakdown-receipt">
+        <div className="breakdown-receipt-header">
+          <span className="breakdown-receipt-title">
+            <Briefcase
+              size={13}
+              style={{ color: '#4338ca', display: 'inline', marginRight: '4px' }}
+            />
+            Bank Shift Pay ({overrideBand || 'Band 2'} · £{effectiveRate.toFixed(2)}/hr)
+          </span>
+          <span className="breakdown-tag bank-tag">{breakdown.totalWorkedHours}h Total</span>
+        </div>
+
+        <div className="breakdown-receipt-items">
+          <div className="breakdown-receipt-row">
+            <span>Bank Hourly Base Rate</span>
+            <span className="breakdown-hours tabular-nums">{breakdown.totalWorkedHours}h</span>
+            <span className="breakdown-amount tabular-nums">+£{bankBasePay.toFixed(2)}</span>
+          </div>
+
+          {nightPay > 0 && (
+            <div className="breakdown-receipt-row">
+              <span>
+                <Moon size={11} style={{ display: 'inline', marginRight: '3px' }} />
+                Night Enhancement (+{(bandConfig.nightEnhancementRate * 100).toFixed(0)}%)
+              </span>
+              <span className="breakdown-hours tabular-nums">
+                {breakdown.nightHours.toFixed(1)}h
+              </span>
+              <span className="breakdown-amount tabular-nums">+£{nightPay.toFixed(2)}</span>
+            </div>
           )}
-          {shiftType === 'ANNUAL_LEAVE' && (
-            <span
-              style={{
-                fontSize: '0.6875rem',
-                fontWeight: 700,
-                color: '#047857',
-                background: '#dcfce7',
-                padding: '1px 6px',
-                borderRadius: '4px',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              🌴 Annual Leave
-            </span>
+
+          {satPay > 0 && (
+            <div className="breakdown-receipt-row">
+              <span>
+                <Calendar size={11} style={{ display: 'inline', marginRight: '3px' }} />
+                Saturday Enhancement (+{(bandConfig.saturdayEnhancementRate * 100).toFixed(0)}%)
+              </span>
+              <span className="breakdown-hours tabular-nums">
+                {breakdown.saturdayHours.toFixed(1)}h
+              </span>
+              <span className="breakdown-amount tabular-nums">+£{satPay.toFixed(2)}</span>
+            </div>
           )}
-          {overrideBand && shiftType !== 'ANNUAL_LEAVE' && (
-            <span
-              style={{
-                fontSize: '0.6875rem',
-                fontWeight: 700,
-                color: 'var(--nhs-blue)',
-                background: '#e0f2fe',
-                padding: '1px 6px',
-                borderRadius: '4px',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {overrideBand} (£{effectiveRate.toFixed(2)}/hr)
-            </span>
+
+          {sunPay > 0 && (
+            <div className="breakdown-receipt-row">
+              <span>
+                <Calendar size={11} style={{ display: 'inline', marginRight: '3px' }} />
+                Sunday Enhancement (+{(bandConfig.sundayAndHolidayEnhancementRate * 100).toFixed(0)}
+                %)
+              </span>
+              <span className="breakdown-hours tabular-nums">
+                {breakdown.sundayHours.toFixed(1)}h
+              </span>
+              <span className="breakdown-amount tabular-nums">+£{sunPay.toFixed(2)}</span>
+            </div>
+          )}
+
+          {bhPay > 0 && (
+            <div className="breakdown-receipt-row">
+              <span>
+                <Sparkles size={11} style={{ display: 'inline', marginRight: '3px' }} />
+                Bank Holiday (+{(bandConfig.sundayAndHolidayEnhancementRate * 100).toFixed(0)}%)
+              </span>
+              <span className="breakdown-hours tabular-nums">
+                {breakdown.bankHolidayHours.toFixed(1)}h
+              </span>
+              <span className="breakdown-amount tabular-nums">+£{bhPay.toFixed(2)}</span>
+            </div>
           )}
         </div>
 
-        {shiftType !== 'ANNUAL_LEAVE' ? (
-          <div
-            className="shift-preview-estimate"
-            style={{
-              color: payslipImpact.extraGrossPay > 0 ? 'var(--emerald)' : 'var(--text-muted)',
-            }}
-          >
-            <Coins size={14} />
-            <span>
-              {payslipImpact.extraGrossPay > 0
-                ? `+£${payslipImpact.extraGrossPay.toFixed(2)} extra`
-                : '£0.00 extra'}
+        <div className="breakdown-receipt-total">
+          <div>
+            <div className="total-label">Total Extra Gross Pay</div>
+            <div className="total-subtext">Paid on top of substantive salary</div>
+          </div>
+          <div className="total-value tabular-nums">+£{payslipImpact.extraGrossPay.toFixed(2)}</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Substantive Shift View
+  const nightPay = breakdown.nightHours * (effectiveRate * bandConfig.nightEnhancementRate);
+  const satPay = breakdown.saturdayHours * (effectiveRate * bandConfig.saturdayEnhancementRate);
+  const sunPay =
+    breakdown.sundayHours * (effectiveRate * bandConfig.sundayAndHolidayEnhancementRate);
+  const bhPay =
+    breakdown.bankHolidayHours * (effectiveRate * bandConfig.sundayAndHolidayEnhancementRate);
+  const hasEnhancements = nightPay > 0 || satPay > 0 || sunPay > 0 || bhPay > 0;
+  const hasExtraHours = payslipImpact.additionalHours > 0 || payslipImpact.overtimeHours > 0;
+
+  return (
+    <div className="breakdown-receipt">
+      <div className="breakdown-receipt-header">
+        <span className="breakdown-receipt-title">Shift Breakdown</span>
+        <span className="breakdown-tag">{breakdown.totalWorkedHours}h Shift</span>
+      </div>
+
+      <div className="breakdown-receipt-items">
+        {/* If shift is within contracted weekly threshold */}
+        {!hasExtraHours && (
+          <div className="breakdown-receipt-row muted-row">
+            <span>Basic Contracted Hours (26h/wk threshold)</span>
+            <span className="breakdown-hours tabular-nums">{breakdown.totalWorkedHours}h</span>
+            <span className="breakdown-amount" style={{ color: 'var(--text-muted)' }}>
+              In Salary
             </span>
           </div>
-        ) : (
-          <div className="shift-preview-estimate" style={{ color: '#047857' }}>
-            <span>{breakdown.totalWorkedHours}h leave</span>
+        )}
+
+        {/* Additional plain time hours */}
+        {payslipImpact.additionalHours > 0 && (
+          <div className="breakdown-receipt-row highlight-row">
+            <span>
+              <Zap
+                size={12}
+                style={{ display: 'inline', marginRight: '3px', color: 'var(--nhs-blue)' }}
+              />
+              Additional Hours (exceeds {payslipImpact.contractedWeeklyHours}h)
+            </span>
+            <span className="breakdown-hours tabular-nums">
+              {payslipImpact.additionalHours.toFixed(1)}h
+            </span>
+            <span className="breakdown-amount tabular-nums">
+              +£{(payslipImpact.additionalHours * effectiveRate).toFixed(2)}
+            </span>
+          </div>
+        )}
+
+        {/* Overtime hours */}
+        {payslipImpact.overtimeHours > 0 && (
+          <div className="breakdown-receipt-row highlight-row">
+            <span>
+              <Zap size={12} style={{ display: 'inline', marginRight: '3px', color: '#b45309' }} />
+              Overtime (above 37.5h · 1.5x)
+            </span>
+            <span className="breakdown-hours tabular-nums">
+              {payslipImpact.overtimeHours.toFixed(1)}h
+            </span>
+            <span className="breakdown-amount tabular-nums">
+              +£{(payslipImpact.overtimeHours * effectiveRate * 1.5).toFixed(2)}
+            </span>
+          </div>
+        )}
+
+        {/* Unsocial Night */}
+        {nightPay > 0 && (
+          <div className="breakdown-receipt-row">
+            <span>
+              <Moon size={11} style={{ display: 'inline', marginRight: '3px', color: '#7c3aed' }} />
+              Night Duty (+{(bandConfig.nightEnhancementRate * 100).toFixed(0)}%)
+            </span>
+            <span className="breakdown-hours tabular-nums">{breakdown.nightHours.toFixed(1)}h</span>
+            <span className="breakdown-amount tabular-nums">+£{nightPay.toFixed(2)}</span>
+          </div>
+        )}
+
+        {/* Saturday */}
+        {satPay > 0 && (
+          <div className="breakdown-receipt-row">
+            <span>
+              <Calendar
+                size={11}
+                style={{ display: 'inline', marginRight: '3px', color: '#e11d48' }}
+              />
+              Saturday (+{(bandConfig.saturdayEnhancementRate * 100).toFixed(0)}%)
+            </span>
+            <span className="breakdown-hours tabular-nums">
+              {breakdown.saturdayHours.toFixed(1)}h
+            </span>
+            <span className="breakdown-amount tabular-nums">+£{satPay.toFixed(2)}</span>
+          </div>
+        )}
+
+        {/* Sunday */}
+        {sunPay > 0 && (
+          <div className="breakdown-receipt-row">
+            <span>
+              <Calendar
+                size={11}
+                style={{ display: 'inline', marginRight: '3px', color: '#059669' }}
+              />
+              Sunday (+{(bandConfig.sundayAndHolidayEnhancementRate * 100).toFixed(0)}%)
+            </span>
+            <span className="breakdown-hours tabular-nums">
+              {breakdown.sundayHours.toFixed(1)}h
+            </span>
+            <span className="breakdown-amount tabular-nums">+£{sunPay.toFixed(2)}</span>
+          </div>
+        )}
+
+        {/* Bank Holiday */}
+        {bhPay > 0 && (
+          <div className="breakdown-receipt-row">
+            <span>
+              <Sparkles
+                size={11}
+                style={{ display: 'inline', marginRight: '3px', color: '#d97706' }}
+              />
+              Bank Holiday (+{(bandConfig.sundayAndHolidayEnhancementRate * 100).toFixed(0)}%)
+            </span>
+            <span className="breakdown-hours tabular-nums">
+              {breakdown.bankHolidayHours.toFixed(1)}h
+            </span>
+            <span className="breakdown-amount tabular-nums">+£{bhPay.toFixed(2)}</span>
           </div>
         )}
       </div>
 
-      <div className="preview-pill-list">
+      <div className="breakdown-receipt-total">
+        <div>
+          <div className="total-label">Estimated Extra Gross Pay</div>
+          <div className="total-subtext">
+            {payslipImpact.extraGrossPay > 0
+              ? hasExtraHours && hasEnhancements
+                ? `+£${payslipImpact.additionalBasePay.toFixed(2)} extra hours + £${payslipImpact.enhancementsTotal.toFixed(2)} unsocial`
+                : hasExtraHours
+                  ? `+£${payslipImpact.additionalBasePay.toFixed(2)} additional hours`
+                  : `+£${payslipImpact.enhancementsTotal.toFixed(2)} unsocial premium`
+              : 'Covered by standard monthly basic salary'}
+          </div>
+        </div>
         <div
-          className="preview-pill"
+          className="total-value tabular-nums"
           style={{
-            borderColor: shiftType === 'ANNUAL_LEAVE' ? 'var(--emerald)' : 'var(--border-medium)',
-            background: shiftType === 'ANNUAL_LEAVE' ? '#ecfdf5' : '#ffffff',
-            color: shiftType === 'ANNUAL_LEAVE' ? '#065f46' : undefined,
-            fontWeight: 600,
+            color: payslipImpact.extraGrossPay > 0 ? 'var(--emerald)' : 'var(--text-muted)',
           }}
         >
-          <span>{shiftType === 'ANNUAL_LEAVE' ? 'Leave Deducted:' : 'Total Paid:'}</span>
-          <strong style={{ color: shiftType === 'ANNUAL_LEAVE' ? '#065f46' : undefined }}>
-            {breakdown.totalWorkedHours} hrs
-          </strong>
+          {payslipImpact.extraGrossPay > 0
+            ? `+£${payslipImpact.extraGrossPay.toFixed(2)}`
+            : '£0.00'}
         </div>
-
-        {shiftType !== 'ANNUAL_LEAVE' && (
-          <>
-            {breakdown.nightHours > 0 && (
-              <div
-                className="preview-pill"
-                style={{
-                  borderColor: '#c4b5fd',
-                  background: '#f5f3ff',
-                  color: '#5b21b6',
-                }}
-              >
-                🌙 Night (+{(bandConfig.nightEnhancementRate * 100).toFixed(0)}%):{' '}
-                <strong style={{ color: '#5b21b6' }}>
-                  {breakdown.nightHours}h (+£
-                  {(
-                    breakdown.nightHours *
-                    (effectiveRate * bandConfig.nightEnhancementRate)
-                  ).toFixed(2)}
-                  )
-                </strong>
-              </div>
-            )}
-            {breakdown.saturdayHours > 0 && (
-              <div
-                className="preview-pill"
-                style={{
-                  borderColor: '#fca5a5',
-                  background: '#fff1f2',
-                  color: '#9f1239',
-                }}
-              >
-                Sat (+{(bandConfig.saturdayEnhancementRate * 100).toFixed(0)}%):{' '}
-                <strong style={{ color: '#9f1239' }}>
-                  {breakdown.saturdayHours}h (+£
-                  {(
-                    breakdown.saturdayHours *
-                    (effectiveRate * bandConfig.saturdayEnhancementRate)
-                  ).toFixed(2)}
-                  )
-                </strong>
-              </div>
-            )}
-            {breakdown.sundayHours > 0 && (
-              <div
-                className="preview-pill"
-                style={{
-                  borderColor: '#86efac',
-                  background: '#ecfdf5',
-                  color: '#047857',
-                }}
-              >
-                Sun (+{(bandConfig.sundayAndHolidayEnhancementRate * 100).toFixed(0)}%):{' '}
-                <strong style={{ color: '#047857' }}>
-                  {breakdown.sundayHours}h (+£
-                  {(
-                    breakdown.sundayHours *
-                    (effectiveRate * bandConfig.sundayAndHolidayEnhancementRate)
-                  ).toFixed(2)}
-                  )
-                </strong>
-              </div>
-            )}
-            {breakdown.bankHolidayHours > 0 && (
-              <div
-                className="preview-pill"
-                style={{
-                  borderColor: '#fcd34d',
-                  background: '#fffbeb',
-                  color: '#92400e',
-                }}
-              >
-                Bank Hol (+{(bandConfig.sundayAndHolidayEnhancementRate * 100).toFixed(0)}%):{' '}
-                <strong style={{ color: '#92400e' }}>
-                  {breakdown.bankHolidayHours}h (+£
-                  {(
-                    breakdown.bankHolidayHours *
-                    (effectiveRate * bandConfig.sundayAndHolidayEnhancementRate)
-                  ).toFixed(2)}
-                  )
-                </strong>
-              </div>
-            )}
-            {shiftType === 'SUBSTANTIVE' &&
-              (payslipImpact.additionalHours > 0 || payslipImpact.overtimeHours > 0) && (
-                <div
-                  className="preview-pill"
-                  style={{
-                    borderColor: '#93c5fd',
-                    background: '#eff6ff',
-                    color: 'var(--nhs-blue)',
-                  }}
-                >
-                  <Zap size={12} style={{ display: 'inline', marginRight: '2px' }} />
-                  Additional Hours (exceeds {payslipImpact.contractedWeeklyHours}h):{' '}
-                  <strong style={{ color: 'var(--nhs-dark-blue)' }}>
-                    {(payslipImpact.additionalHours + payslipImpact.overtimeHours).toFixed(1)}h (+£
-                    {payslipImpact.additionalBasePay.toFixed(2)})
-                  </strong>
-                </div>
-              )}
-          </>
-        )}
-      </div>
-
-      <div
-        className="shift-preview-note"
-        style={{
-          color:
-            shiftType === 'BANK'
-              ? '#4338ca'
-              : shiftType === 'ANNUAL_LEAVE'
-                ? '#047857'
-                : payslipImpact.extraGrossPay > 0
-                  ? 'var(--emerald)'
-                  : 'var(--text-muted)',
-        }}
-      >
-        ℹ️ {payslipImpact.summaryText}
       </div>
     </div>
   );
