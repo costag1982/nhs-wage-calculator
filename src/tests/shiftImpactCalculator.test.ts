@@ -145,10 +145,10 @@ describe('ShiftImpactCalculator', () => {
     expect(impact.overtimeHours).toBe(0);
     expect(impact.enhancementsTotal).toBe(39.74);
     expect(impact.extraGrossPay).toBe(39.74);
-    expect(impact.summaryText).toContain('unsocial premium on top of basic salary');
+    expect(impact.summaryText).toContain('unsocial enhancements on top of basic salary');
   });
 
-  it('should correctly calculate additional hours and overtime when weekly hours exceed thresholds', () => {
+  it('should correctly calculate additional hours and overtime for an extra OVERTIME shift', () => {
     // 3 prior shifts in same week (2026-06-08 Mon, 2026-06-09 Tue, 2026-06-10 Wed) each 8h = 24h
     const existingShifts: Shift[] = [
       {
@@ -177,21 +177,21 @@ describe('ShiftImpactCalculator', () => {
       },
     ];
 
-    // Candidate shift on 2026-06-11 Thu: 16h shift (takes week from 24h to 40h)
+    // Extra / Overtime shift on 2026-06-11 Thu: 16h shift (takes week from 24h to 40h)
     const candidateShift = {
       id: 's4',
       date: '2026-06-11',
       startTime: '06:00',
       endTime: '22:00',
       unpaidBreakMinutes: 0,
-      shiftType: 'SUBSTANTIVE' as const,
+      shiftType: 'OVERTIME' as const,
     };
     const breakdown = calculateShiftBreakdown(candidateShift);
 
     const impact = calculateShiftGrossImpact(
       {
         date: candidateShift.date,
-        shiftType: 'SUBSTANTIVE',
+        shiftType: 'OVERTIME',
         breakdown,
         effectiveRate: hourlyRate,
         bandConfig: band2Config,
@@ -202,10 +202,10 @@ describe('ShiftImpactCalculator', () => {
 
     expect(impact.priorWeeklyHours).toBe(24);
     expect(impact.newWeeklyHours).toBe(40);
-    expect(impact.additionalHours).toBe(11.5);
+    expect(impact.additionalHours).toBe(13.5);
     expect(impact.overtimeHours).toBe(2.5);
     expect(impact.additionalBasePay).toBe(
-      Math.round((11.5 * hourlyRate + 2.5 * hourlyRate * 1.5) * 100) / 100
+      Math.round((13.5 * hourlyRate + 2.5 * hourlyRate * 1.5) * 100) / 100
     );
   });
 });

@@ -164,10 +164,10 @@ describe('NHS Annual Leave & Entitlement (AfC Section 13)', () => {
           id: 'w-3',
           date: '2026-07-09', // Thursday
           startTime: '08:00',
-          endTime: '16:00',
-          unpaidBreakMinutes: 30,
-          shiftType: 'SUBSTANTIVE',
-        }, // 7.5h Worked
+          endTime: '12:00',
+          unpaidBreakMinutes: 0,
+          shiftType: 'OVERTIME',
+        }, // 4.0h Extra OVERTIME Worked
       ];
 
       const result = calculateMonthlyPayslip(
@@ -239,9 +239,8 @@ describe('NHS Annual Leave & Entitlement (AfC Section 13)', () => {
       expect(result.grossPay).toBe(1460.16);
     });
 
-    it('correctly calculates overtime (1.5x) when leave + worked shifts exceed FTE 37.5h threshold', () => {
-      // Week 28: 7.5h AL + 35.0h worked shifts (total 42.5h accounted)
-      // Paid excess = 16.5h.
+    it('correctly calculates overtime (1.5x) when leave + extra OVERTIME shifts exceed FTE 37.5h threshold', () => {
+      // Week 28: 7.5h AL + 18.5h substantive = 26.0h rostered + 16.5h extra OVERTIME shifts (total 42.5h accounted)
       // Overtime above FTE 37.5h = 5.0h @ 1.5x (£19.3868) = £96.93
       // Additional hours (26.0h to 37.5h) = 11.5h @ 1.0x (£12.9245) = £148.63
       const shifts: Shift[] = [
@@ -273,26 +272,26 @@ describe('NHS Annual Leave & Entitlement (AfC Section 13)', () => {
           id: 'w-3',
           date: '2026-07-09',
           startTime: '08:00',
-          endTime: '16:00',
-          unpaidBreakMinutes: 30,
+          endTime: '11:30',
+          unpaidBreakMinutes: 0,
           shiftType: 'SUBSTANTIVE',
-        }, // 7.5h
+        }, // 3.5h (Total rostered = 26.0h)
         {
           id: 'w-4',
           date: '2026-07-10',
-          startTime: '08:00',
-          endTime: '16:00',
-          unpaidBreakMinutes: 30,
-          shiftType: 'SUBSTANTIVE',
-        }, // 7.5h
+          startTime: '07:30',
+          endTime: '19:00',
+          unpaidBreakMinutes: 0,
+          shiftType: 'OVERTIME',
+        }, // 11.5h OVERTIME
         {
           id: 'w-5',
           date: '2026-07-11',
           startTime: '08:00',
           endTime: '13:00',
           unpaidBreakMinutes: 0,
-          shiftType: 'SUBSTANTIVE',
-        }, // 5.0h
+          shiftType: 'OVERTIME',
+        }, // 5.0h OVERTIME
       ];
 
       const result = calculateMonthlyPayslip(gemmaProfile, shifts, [], new Date(2026, 6, 1));

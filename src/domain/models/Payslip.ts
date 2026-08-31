@@ -33,6 +33,7 @@ export interface PayslipSummary {
   pensionablePay: number;
   taxablePay: number;
   annualLeaveHours?: number; // Total annual leave hours recorded in this roster month
+  afcAbsencePay?: number; // AfC Section 13 leave enhancement pay (AfC Absence)
 
   // Additional Hours & Overtime (substantive contracts only)
 

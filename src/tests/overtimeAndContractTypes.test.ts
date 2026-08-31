@@ -33,14 +33,42 @@ describe('Overtime, Additional Hours & Contract Types (AfC Section 3)', () => {
     expect(baseRates.monthlyBasicHours).toBe(112.98);
   });
 
-  it('calculates Additional Hours at plain time (1.0x) when weekly hours exceed contracted but remain under FTE 37.5h', () => {
-    // 26h contracted. 4x 7.5h shifts = 30.0h in Week 27 (2026-07-06 to 2026-07-09)
-    // Excess = 30.0 - 26.0 = 4.0h Additional Hours @ plain time (£12.9245/hr = £51.70)
+  it('calculates Additional Hours at plain time (1.0x) when an extra OVERTIME shift is worked under FTE 37.5h', () => {
+    // 26h contracted. 3x 7.5h substantive shifts (22.5h) + 1x 4.0h OVERTIME shift = 26.5h
+    // Additional hours = 4.0h @ plain time (£12.9245/hr = £51.70)
     const shifts: Shift[] = [
-      { id: '1', date: '2026-07-06', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30 },
-      { id: '2', date: '2026-07-07', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30 },
-      { id: '3', date: '2026-07-08', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30 },
-      { id: '4', date: '2026-07-09', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30 },
+      {
+        id: '1',
+        date: '2026-07-06',
+        startTime: '08:00',
+        endTime: '16:00',
+        unpaidBreakMinutes: 30,
+        shiftType: 'SUBSTANTIVE',
+      },
+      {
+        id: '2',
+        date: '2026-07-07',
+        startTime: '08:00',
+        endTime: '16:00',
+        unpaidBreakMinutes: 30,
+        shiftType: 'SUBSTANTIVE',
+      },
+      {
+        id: '3',
+        date: '2026-07-08',
+        startTime: '08:00',
+        endTime: '16:00',
+        unpaidBreakMinutes: 30,
+        shiftType: 'SUBSTANTIVE',
+      },
+      {
+        id: '4',
+        date: '2026-07-09',
+        startTime: '08:00',
+        endTime: '12:00',
+        unpaidBreakMinutes: 0,
+        shiftType: 'OVERTIME',
+      },
     ];
 
     const result = calculateMonthlyPayslip(baseProfile, shifts, [], new Date(2026, 6, 1));
@@ -55,17 +83,67 @@ describe('Overtime, Additional Hours & Contract Types (AfC Section 3)', () => {
     expect(additionalLine?.amount).toBe(51.7);
   });
 
-  it('calculates Overtime at 1.5x when weekly hours exceed FTE 37.5h for eligible Bands (Band 2-7)', () => {
-    // 26h contracted. 6x 7.5h shifts = 45.0h in Week 27 (Mon-Sat)
+  it('calculates Overtime at 1.5x when extra OVERTIME shifts exceed FTE 37.5h for eligible Bands (Band 2-7)', () => {
+    // 26h contracted substantive shifts + 19.0h OVERTIME shifts = 45.0h in Week 27
     // Additional hours (26.0 to 37.5) = 11.5h @ 1.0x = £148.63
     // Overtime hours (37.5 to 45.0) = 7.5h @ 1.5x (£19.3868/hr) = £145.40
     const shifts: Shift[] = [
-      { id: '1', date: '2026-07-06', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30 },
-      { id: '2', date: '2026-07-07', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30 },
-      { id: '3', date: '2026-07-08', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30 },
-      { id: '4', date: '2026-07-09', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30 },
-      { id: '5', date: '2026-07-10', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30 },
-      { id: '6', date: '2026-07-11', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30 },
+      {
+        id: '1',
+        date: '2026-07-06',
+        startTime: '08:00',
+        endTime: '16:00',
+        unpaidBreakMinutes: 30,
+        shiftType: 'SUBSTANTIVE',
+      },
+      {
+        id: '2',
+        date: '2026-07-07',
+        startTime: '08:00',
+        endTime: '16:00',
+        unpaidBreakMinutes: 30,
+        shiftType: 'SUBSTANTIVE',
+      },
+      {
+        id: '3',
+        date: '2026-07-08',
+        startTime: '08:00',
+        endTime: '16:00',
+        unpaidBreakMinutes: 30,
+        shiftType: 'SUBSTANTIVE',
+      },
+      {
+        id: '4',
+        date: '2026-07-09',
+        startTime: '08:00',
+        endTime: '11:30',
+        unpaidBreakMinutes: 0,
+        shiftType: 'SUBSTANTIVE',
+      }, // 3.5h
+      {
+        id: '5',
+        date: '2026-07-10',
+        startTime: '08:00',
+        endTime: '16:00',
+        unpaidBreakMinutes: 30,
+        shiftType: 'OVERTIME',
+      }, // 7.5h
+      {
+        id: '6',
+        date: '2026-07-11',
+        startTime: '08:00',
+        endTime: '16:00',
+        unpaidBreakMinutes: 30,
+        shiftType: 'OVERTIME',
+      }, // 7.5h
+      {
+        id: '7',
+        date: '2026-07-12',
+        startTime: '08:00',
+        endTime: '12:00',
+        unpaidBreakMinutes: 0,
+        shiftType: 'OVERTIME',
+      }, // 4.0h
     ];
 
     const result = calculateMonthlyPayslip(baseProfile, shifts, [], new Date(2026, 6, 1));
@@ -89,14 +167,56 @@ describe('Overtime, Additional Hours & Contract Types (AfC Section 3)', () => {
       contractedWeeklyHours: 37.5,
     };
 
-    // 45 hours worked (7.5h excess over contracted 37.5h)
+    // 37.5h substantive + 7.5h OVERTIME shift = 45 hours
     const shifts: Shift[] = [
-      { id: '1', date: '2026-07-06', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30 },
-      { id: '2', date: '2026-07-07', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30 },
-      { id: '3', date: '2026-07-08', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30 },
-      { id: '4', date: '2026-07-09', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30 },
-      { id: '5', date: '2026-07-10', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30 },
-      { id: '6', date: '2026-07-11', startTime: '08:00', endTime: '16:00', unpaidBreakMinutes: 30 },
+      {
+        id: '1',
+        date: '2026-07-06',
+        startTime: '08:00',
+        endTime: '16:00',
+        unpaidBreakMinutes: 30,
+        shiftType: 'SUBSTANTIVE',
+      },
+      {
+        id: '2',
+        date: '2026-07-07',
+        startTime: '08:00',
+        endTime: '16:00',
+        unpaidBreakMinutes: 30,
+        shiftType: 'SUBSTANTIVE',
+      },
+      {
+        id: '3',
+        date: '2026-07-08',
+        startTime: '08:00',
+        endTime: '16:00',
+        unpaidBreakMinutes: 30,
+        shiftType: 'SUBSTANTIVE',
+      },
+      {
+        id: '4',
+        date: '2026-07-09',
+        startTime: '08:00',
+        endTime: '16:00',
+        unpaidBreakMinutes: 30,
+        shiftType: 'SUBSTANTIVE',
+      },
+      {
+        id: '5',
+        date: '2026-07-10',
+        startTime: '08:00',
+        endTime: '16:00',
+        unpaidBreakMinutes: 30,
+        shiftType: 'SUBSTANTIVE',
+      },
+      {
+        id: '6',
+        date: '2026-07-11',
+        startTime: '08:00',
+        endTime: '16:00',
+        unpaidBreakMinutes: 30,
+        shiftType: 'OVERTIME',
+      },
     ];
 
     const result = calculateMonthlyPayslip(band8aProfile, shifts, [], new Date(2026, 6, 1));
@@ -222,10 +342,10 @@ describe('Overtime, Additional Hours & Contract Types (AfC Section 3)', () => {
         id: '4',
         date: '2026-07-09',
         startTime: '08:00',
-        endTime: '16:00',
-        unpaidBreakMinutes: 30,
-        shiftType: 'SUBSTANTIVE',
-      }, // 7.5h
+        endTime: '12:00',
+        unpaidBreakMinutes: 0,
+        shiftType: 'OVERTIME',
+      }, // 4.0h OVERTIME
       {
         id: '5',
         date: '2026-07-10',
@@ -289,7 +409,7 @@ describe('Overtime, Additional Hours & Contract Types (AfC Section 3)', () => {
     const band3HourlyRate = 14.05;
 
     const julyShifts: Shift[] = [
-      // Week 1 (6–12 July): 36.0h substantive (e.g. 4x 7.5h + 6.0h Sunday on 12 July)
+      // Week 1 (6–12 July): 30h substantive + 6.0h OVERTIME Sunday on 12 July (total 36.0h worked)
       {
         id: 'w1-1',
         date: '2026-07-06',
@@ -328,8 +448,8 @@ describe('Overtime, Additional Hours & Contract Types (AfC Section 3)', () => {
         startTime: '08:00',
         endTime: '14:00',
         unpaidBreakMinutes: 0,
-        shiftType: 'SUBSTANTIVE',
-      }, // 6.0h Sunday
+        shiftType: 'OVERTIME',
+      }, // 6.0h OVERTIME Sunday
 
       // Week 2 (13–19 July):
       // Substantive: 3x 7.5h = 22.5h (< 26.0h -> 0 additional hours)
@@ -377,7 +497,7 @@ describe('Overtime, Additional Hours & Contract Types (AfC Section 3)', () => {
         customHourlyRate: band3HourlyRate,
       }, // 5.5h Bank Sunday (Band 3)
 
-      // Week 3 (20–26 July): 30.5h substantive (3x 7.5h + 8.0h Sunday on 26 July -> 4.5h additional)
+      // Week 3 (20–26 July): 22.5h substantive + 8.5h OVERTIME Sunday on 26 July -> 8.5h additional
       {
         id: 'w3-1',
         date: '2026-07-20',
@@ -405,11 +525,11 @@ describe('Overtime, Additional Hours & Contract Types (AfC Section 3)', () => {
       {
         id: 'w3-sun',
         date: '2026-07-26',
-        startTime: '08:00',
+        startTime: '07:30',
         endTime: '16:00',
         unpaidBreakMinutes: 0,
-        shiftType: 'SUBSTANTIVE',
-      }, // 8.0h Sunday
+        shiftType: 'OVERTIME',
+      }, // 8.5h OVERTIME Sunday
 
       // Week 4 (27–31 July): 22.5h substantive (3x 7.5h -> 0 additional)
       {
@@ -450,12 +570,12 @@ describe('Overtime, Additional Hours & Contract Types (AfC Section 3)', () => {
     expect(result.additionalHoursPay).toBe(187.41);
     expect(result.overtimeHours).toBeUndefined();
 
-    // 2. Substantive Sunday EN: strictly 14.0h (6h on 12 July + 8h on 26 July)
+    // 2. Substantive Sunday EN: strictly 14.5h (6h on 12 July + 8.5h on 26 July)
     const substantiveSundayItem = result.payLineItems.find((p) => p.description === 'Sunday EN');
     expect(substantiveSundayItem).toBeDefined();
-    expect(substantiveSundayItem?.unitsWorked).toBe(14.0);
-    expect(substantiveSundayItem?.paidUnits).toBe(11.62); // 14h * 0.83 = 11.62h
-    expect(substantiveSundayItem?.amount).toBe(150.18); // 11.62 * 12.9245 = 150.18
+    expect(substantiveSundayItem?.unitsWorked).toBe(14.5);
+    expect(substantiveSundayItem?.paidUnits).toBe(12.04); // 14.5h * 0.83 = 12.035 -> 12.04h
+    expect(substantiveSundayItem?.amount).toBe(155.61); // 12.04 * 12.9245 = 155.61
 
     // 3. No Acting Up Allowance (Band 3 was worked as a Bank shift, not substantive acting up)
     const actingUpItem = result.payLineItems.find(

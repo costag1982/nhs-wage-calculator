@@ -1,6 +1,6 @@
 import React from 'react';
 import { ShiftWorkType } from '../../../domain/models/Shift';
-import { Briefcase, Zap, Palmtree } from 'lucide-react';
+import { Briefcase, Clock, Zap, Palmtree } from 'lucide-react';
 
 interface ShiftTypeSelectorProps {
   shiftType: ShiftWorkType;
@@ -19,7 +19,15 @@ export const ShiftTypeSelector: React.FC<ShiftTypeSelectorProps> = ({
         onClick={() => onSelectType('SUBSTANTIVE')}
       >
         <Briefcase size={12} />
-        <span>Substantive (26h)</span>
+        <span>Rostered</span>
+      </button>
+      <button
+        type="button"
+        className={`segmented-tab ${shiftType === 'OVERTIME' ? 'active overtime-active' : ''}`}
+        onClick={() => onSelectType('OVERTIME')}
+      >
+        <Clock size={12} />
+        <span>Extra / Overtime</span>
       </button>
       <button
         type="button"

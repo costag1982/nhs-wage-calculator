@@ -162,6 +162,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
                   let pillClass = 'shift-pill-day';
                   if (isLeave) pillClass = 'shift-pill-leave';
+                  else if (shift.shiftType === 'OVERTIME') pillClass = 'shift-pill-overtime';
                   else if (isHoliday) pillClass = 'shift-pill-holiday';
                   else if (isSunday) pillClass = 'shift-pill-weekend';
                   else if (isSaturday) pillClass = 'shift-pill-weekend';
@@ -212,6 +213,19 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                             }}
                           >
                             🌴 Paid Leave
+                          </span>
+                        )}
+                        {shift.shiftType === 'OVERTIME' && (
+                          <span
+                            className="enhancement-micro-badge"
+                            style={{
+                              background: '#fef3c7',
+                              color: '#b45309',
+                              borderColor: '#fde68a',
+                              fontWeight: 700,
+                            }}
+                          >
+                            ⚡ Overtime
                           </span>
                         )}
                         {shift.shiftType === 'BANK' && (

@@ -175,10 +175,10 @@ describe('calculateShiftGrossImpact', () => {
     expect(impact.enhancementsTotal).toBeCloseTo(39.74, 2);
     expect(impact.additionalBasePay).toBe(0);
     expect(impact.extraGrossPay).toBeCloseTo(39.74, 2);
-    expect(impact.summaryText).toContain('unsocial premium on top of basic salary');
+    expect(impact.summaryText).toContain('unsocial enhancements on top of basic salary');
   });
 
-  it('reports both additional hours pay and night enhancement (+£136.68 total) when shift exceeds 26h threshold', () => {
+  it('reports both additional hours pay and night enhancement (+£136.68 total) when extra OVERTIME shift is worked', () => {
     // 26h already worked earlier this week (e.g. Mon, Tue, Wed)
     const priorShifts: Shift[] = [
       {
@@ -213,12 +213,13 @@ describe('calculateShiftGrossImpact', () => {
       startTime: '22:00',
       endTime: '06:00',
       unpaidBreakMinutes: 30,
+      shiftType: 'OVERTIME',
     }); // 7.5h night
 
     const impact = calculateShiftGrossImpact(
       {
         date: '2026-06-04',
-        shiftType: 'SUBSTANTIVE',
+        shiftType: 'OVERTIME',
         breakdown,
         effectiveRate: hourlyRate,
         bandConfig: band2Config,
@@ -233,8 +234,8 @@ describe('calculateShiftGrossImpact', () => {
     expect(impact.enhancementsTotal).toBeCloseTo(39.74, 2);
     // Total extra = 96.93 + 39.74 = £136.68
     expect(impact.extraGrossPay).toBeCloseTo(136.68, 2);
-    expect(impact.summaryText).toContain('additional hours');
-    expect(impact.summaryText).toContain('unsocial premium');
+    expect(impact.summaryText).toContain('extra pay');
+    expect(impact.summaryText).toContain('unsocial enhancements');
   });
 
   it('reports the full shift value for Bank shifts regardless of weekly hours', () => {

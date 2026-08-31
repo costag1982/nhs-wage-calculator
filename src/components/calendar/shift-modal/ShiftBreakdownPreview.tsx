@@ -142,7 +142,8 @@ export const ShiftBreakdownPreview: React.FC<ShiftBreakdownPreviewProps> = ({
     );
   }
 
-  // Substantive Shift View
+  // Substantive / Overtime Shift View
+  const isOvertimeShift = shiftType === 'OVERTIME';
   const nightPay = breakdown.nightHours * (effectiveRate * bandConfig.nightEnhancementRate);
   const satPay = breakdown.saturdayHours * (effectiveRate * bandConfig.saturdayEnhancementRate);
   const sunPay =
@@ -150,20 +151,25 @@ export const ShiftBreakdownPreview: React.FC<ShiftBreakdownPreviewProps> = ({
   const bhPay =
     breakdown.bankHolidayHours * (effectiveRate * bandConfig.sundayAndHolidayEnhancementRate);
   const hasEnhancements = nightPay > 0 || satPay > 0 || sunPay > 0 || bhPay > 0;
-  const hasExtraHours = payslipImpact.additionalHours > 0 || payslipImpact.overtimeHours > 0;
+  const hasExtraHours =
+    isOvertimeShift && (payslipImpact.additionalHours > 0 || payslipImpact.overtimeHours > 0);
 
   return (
     <div className="breakdown-receipt">
       <div className="breakdown-receipt-header">
-        <span className="breakdown-receipt-title">Shift Breakdown</span>
-        <span className="breakdown-tag">{breakdown.totalWorkedHours}h Shift</span>
+        <span className="breakdown-receipt-title">
+          {isOvertimeShift ? 'Extra / Overtime Shift' : 'Rostered Substantive Shift'}
+        </span>
+        <span className={`breakdown-tag ${isOvertimeShift ? 'bank-tag' : ''}`}>
+          {breakdown.totalWorkedHours}h Shift
+        </span>
       </div>
 
       <div className="breakdown-receipt-items">
-        {/* If shift is within contracted weekly threshold */}
-        {!hasExtraHours && (
+        {/* If shift is a standard rostered substantive shift */}
+        {!isOvertimeShift && (
           <div className="breakdown-receipt-row muted-row">
-            <span>Basic Contracted Hours (26h/wk threshold)</span>
+            <span>Standard Contracted Rota</span>
             <span className="breakdown-hours tabular-nums">{breakdown.totalWorkedHours}h</span>
             <span className="breakdown-amount" style={{ color: 'var(--text-muted)' }}>
               In Salary
@@ -171,15 +177,15 @@ export const ShiftBreakdownPreview: React.FC<ShiftBreakdownPreviewProps> = ({
           </div>
         )}
 
-        {/* Additional plain time hours */}
-        {payslipImpact.additionalHours > 0 && (
+        {/* Additional plain time hours for overtime shifts */}
+        {isOvertimeShift && payslipImpact.additionalHours > 0 && (
           <div className="breakdown-receipt-row highlight-row">
             <span>
               <Zap
                 size={12}
                 style={{ display: 'inline', marginRight: '3px', color: 'var(--nhs-blue)' }}
               />
-              Additional Hours (exceeds {payslipImpact.contractedWeeklyHours}h)
+              Additional Hours (Plain Time 1.0×)
             </span>
             <span className="breakdown-hours tabular-nums">
               {payslipImpact.additionalHours.toFixed(1)}h
@@ -190,12 +196,12 @@ export const ShiftBreakdownPreview: React.FC<ShiftBreakdownPreviewProps> = ({
           </div>
         )}
 
-        {/* Overtime hours */}
-        {payslipImpact.overtimeHours > 0 && (
+        {/* Overtime hours for overtime shifts */}
+        {isOvertimeShift && payslipImpact.overtimeHours > 0 && (
           <div className="breakdown-receipt-row highlight-row">
             <span>
               <Zap size={12} style={{ display: 'inline', marginRight: '3px', color: '#b45309' }} />
-              Overtime (above 37.5h · 1.5x)
+              Overtime (above 37.5h FTE · 1.5×)
             </span>
             <span className="breakdown-hours tabular-nums">
               {payslipImpact.overtimeHours.toFixed(1)}h
@@ -279,7 +285,7 @@ export const ShiftBreakdownPreview: React.FC<ShiftBreakdownPreviewProps> = ({
                 ? `+£${payslipImpact.additionalBasePay.toFixed(2)} extra hours + £${payslipImpact.enhancementsTotal.toFixed(2)} unsocial`
                 : hasExtraHours
                   ? `+£${payslipImpact.additionalBasePay.toFixed(2)} additional hours`
-                  : `+£${payslipImpact.enhancementsTotal.toFixed(2)} unsocial premium`
+                  : `+£${payslipImpact.enhancementsTotal.toFixed(2)} unsocial enhancements`
               : 'Covered by standard monthly basic salary'}
           </div>
         </div>

@@ -99,6 +99,21 @@ export const ShiftListView: React.FC<ShiftListViewProps> = ({
                       🌴 Leave
                     </span>
                   )}
+                  {shift.shiftType === 'OVERTIME' && (
+                    <span
+                      style={{
+                        marginLeft: '6px',
+                        fontSize: '0.6875rem',
+                        fontWeight: 700,
+                        color: '#b45309',
+                        background: '#fef3c7',
+                        padding: '1px 5px',
+                        borderRadius: '4px',
+                      }}
+                    >
+                      ⚡ Overtime
+                    </span>
+                  )}
                   {shift.shiftType === 'BANK' && (
                     <span
                       style={{

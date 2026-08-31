@@ -226,6 +226,220 @@ describe('Historical Payslip Validation - Miss Gemma Howard (July 2026)', () => 
     expect(result.netPay).toBe(1588.07);
   });
 
+  it('matches 30 June 2026 payslip (May 2026 roster) with 0 phantom additional hours', () => {
+    // Shifts worked in May 2026:
+    // Basic Pay: 112.98 hrs (£1,460.16)
+    // Bank Holiday: 11.00 hrs (£118.01)
+    // Night Duty: 24.50 hrs (£129.82)
+    // Saturday: 15.50 hrs (£82.13)
+    // Sunday: 15.50 hrs (£166.27)
+    // Annual Leave: 15.00 hrs
+    const mayShifts: Shift[] = [
+      {
+        id: 'may-bh',
+        date: '2026-05-04',
+        startTime: '08:00',
+        endTime: '19:30',
+        unpaidBreakMinutes: 30,
+        shiftType: 'SUBSTANTIVE',
+        breakdown: {
+          totalWorkedHours: 11,
+          plainDayHours: 0,
+          nightHours: 0,
+          saturdayHours: 0,
+          sundayHours: 0,
+          bankHolidayHours: 11,
+        },
+      },
+      {
+        id: 'may-n1',
+        date: '2026-05-06',
+        startTime: '22:00',
+        endTime: '06:00',
+        unpaidBreakMinutes: 30,
+        shiftType: 'SUBSTANTIVE',
+        breakdown: {
+          totalWorkedHours: 7.5,
+          plainDayHours: 0,
+          nightHours: 7.5,
+          saturdayHours: 0,
+          sundayHours: 0,
+          bankHolidayHours: 0,
+        },
+      },
+      {
+        id: 'may-n2',
+        date: '2026-05-13',
+        startTime: '22:00',
+        endTime: '06:00',
+        unpaidBreakMinutes: 30,
+        shiftType: 'SUBSTANTIVE',
+        breakdown: {
+          totalWorkedHours: 7.5,
+          plainDayHours: 0,
+          nightHours: 7.5,
+          saturdayHours: 0,
+          sundayHours: 0,
+          bankHolidayHours: 0,
+        },
+      },
+      {
+        id: 'may-n3',
+        date: '2026-05-20',
+        startTime: '20:00',
+        endTime: '06:00',
+        unpaidBreakMinutes: 30,
+        shiftType: 'SUBSTANTIVE',
+        breakdown: {
+          totalWorkedHours: 9.5,
+          plainDayHours: 0,
+          nightHours: 9.5,
+          saturdayHours: 0,
+          sundayHours: 0,
+          bankHolidayHours: 0,
+        },
+      },
+      {
+        id: 'may-sat1',
+        date: '2026-05-09',
+        startTime: '08:00',
+        endTime: '16:30',
+        unpaidBreakMinutes: 30,
+        shiftType: 'SUBSTANTIVE',
+        breakdown: {
+          totalWorkedHours: 8,
+          plainDayHours: 0,
+          nightHours: 0,
+          saturdayHours: 8,
+          sundayHours: 0,
+          bankHolidayHours: 0,
+        },
+      },
+      {
+        id: 'may-sat2',
+        date: '2026-05-23',
+        startTime: '08:00',
+        endTime: '16:00',
+        unpaidBreakMinutes: 30,
+        shiftType: 'SUBSTANTIVE',
+        breakdown: {
+          totalWorkedHours: 7.5,
+          plainDayHours: 0,
+          nightHours: 0,
+          saturdayHours: 7.5,
+          sundayHours: 0,
+          bankHolidayHours: 0,
+        },
+      },
+      {
+        id: 'may-sun1',
+        date: '2026-05-10',
+        startTime: '08:00',
+        endTime: '16:30',
+        unpaidBreakMinutes: 30,
+        shiftType: 'SUBSTANTIVE',
+        breakdown: {
+          totalWorkedHours: 8,
+          plainDayHours: 0,
+          nightHours: 0,
+          saturdayHours: 0,
+          sundayHours: 8,
+          bankHolidayHours: 0,
+        },
+      },
+      {
+        id: 'may-sun2',
+        date: '2026-05-24',
+        startTime: '08:00',
+        endTime: '16:00',
+        unpaidBreakMinutes: 30,
+        shiftType: 'SUBSTANTIVE',
+        breakdown: {
+          totalWorkedHours: 7.5,
+          plainDayHours: 0,
+          nightHours: 0,
+          saturdayHours: 0,
+          sundayHours: 7.5,
+          bankHolidayHours: 0,
+        },
+      },
+      {
+        id: 'may-al1',
+        date: '2026-05-18',
+        startTime: '08:00',
+        endTime: '16:00',
+        unpaidBreakMinutes: 30,
+        shiftType: 'ANNUAL_LEAVE',
+        breakdown: {
+          totalWorkedHours: 7.5,
+          plainDayHours: 0,
+          nightHours: 0,
+          saturdayHours: 0,
+          sundayHours: 0,
+          bankHolidayHours: 0,
+        },
+      },
+      {
+        id: 'may-al2',
+        date: '2026-05-19',
+        startTime: '08:00',
+        endTime: '16:00',
+        unpaidBreakMinutes: 30,
+        shiftType: 'ANNUAL_LEAVE',
+        breakdown: {
+          totalWorkedHours: 7.5,
+          plainDayHours: 0,
+          nightHours: 0,
+          saturdayHours: 0,
+          sundayHours: 0,
+          bankHolidayHours: 0,
+        },
+      },
+    ];
+
+    const result = calculateMonthlyPayslip(
+      gemmaProfile,
+      mayShifts,
+      commitments,
+      new Date(2026, 4, 1) // May 2026 -> Paid 30 June 2026
+    );
+
+    expect(result.rosterMonthString).toBe('May 2026');
+    expect(result.monthYearString).toBe('June 2026');
+    expect(result.payDate).toBe('30 JUN 2026');
+    expect(result.periodEndDate).toBe('30 JUN 2026');
+    expect(result.taxPeriod).toBe(3);
+
+    // Basic Pay £1,460.16
+    expect(result.monthlyBasicPay).toBe(1460.16);
+
+    // Additional Hours & Overtime: MUST BE 0 / undefined (no phantom additional hours!)
+    expect(result.additionalHours).toBeUndefined();
+    expect(result.overtimeHours).toBeUndefined();
+
+    // Bank Holiday ENH: 11h = £118.00 (9.13 paid units @ £12.9245)
+    const bhLine = result.payLineItems.find((p) => p.description === 'Public Holiday EN');
+    expect(bhLine?.amount).toBe(118.0);
+
+    // Night Duty EN: 24.5h -> 10.05 paid units @ £12.9245 = £129.89
+    const nightLine = result.payLineItems.find((p) => p.description === 'Night Duty EN');
+    expect(nightLine?.amount).toBe(129.89);
+
+    // Saturday EN: 15.5h -> 6.36 paid units @ £12.9245 = £82.20
+    const satLine = result.payLineItems.find((p) => p.description === 'Saturday EN');
+    expect(satLine?.amount).toBe(82.2);
+
+    // Sunday EN: 15.5h -> 12.87 paid units @ £12.9245 = £166.34
+    const sunLine = result.payLineItems.find((p) => p.description === 'Sunday EN');
+    expect(sunLine?.amount).toBe(166.34);
+
+    // AfC Absence for 15h annual leave
+    expect(result.afcAbsencePay).toBeGreaterThan(0);
+    const afcAbsenceLine = result.payLineItems.find((p) => p.description === 'AfC Absence');
+    expect(afcAbsenceLine).toBeDefined();
+    expect(afcAbsenceLine?.unitsWorked).toBe(15.0);
+  });
+
   it('accurately calculates payday as last working day of month across various months', () => {
     // July shifts -> Paid August 2026 (31 Aug is Bank Holiday -> Friday 28 Aug 2026)
     const augResult = calculateMonthlyPayslip(

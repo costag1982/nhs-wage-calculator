@@ -50,32 +50,6 @@ const calculatePriorWeeklyHours = (
   return roundHours(priorWeeklyHours);
 };
 
-const buildSubstantiveSummaryText = (params: {
-  extraGrossPay: number;
-  additionalBasePay: number;
-  enhancementsTotal: number;
-  totalWorked: number;
-  contractedWeekly: number;
-}): string => {
-  const { extraGrossPay, additionalBasePay, enhancementsTotal, totalWorked, contractedWeekly } =
-    params;
-
-  if (extraGrossPay === 0) {
-    return `Covered by basic monthly salary (fulfils ${totalWorked}h of ${contractedWeekly}h weekly threshold)`;
-  }
-  if (additionalBasePay === 0 && enhancementsTotal > 0) {
-    return `+£${enhancementsTotal.toFixed(2)} unsocial premium on top of basic salary`;
-  }
-  if (additionalBasePay > 0 && enhancementsTotal === 0) {
-    return `+£${additionalBasePay.toFixed(
-      2
-    )} additional hours (exceeds ${contractedWeekly}h threshold)`;
-  }
-  return `+£${additionalBasePay.toFixed(2)} additional hours + £${enhancementsTotal.toFixed(
-    2
-  )} unsocial premium`;
-};
-
 /**
  * Calculates the incremental gross wage impact of a candidate shift against existing shifts
  * in the same ISO week, respecting Agenda for Change unsocial enhancements, additional hours,
@@ -141,19 +115,49 @@ export const calculateShiftGrossImpact = (
     };
   }
 
-  // Case 3: Substantive Shift
-  const priorWeeklyHours = calculatePriorWeeklyHours(existingShifts, date, initialShiftId);
+  // Case 3: Standard Substantive Roster Shift (Covered by Basic Salary)
+  if (shiftType === 'SUBSTANTIVE') {
+    const enhancementsTotal = roundCurrency(rawEnhancementsTotal);
+    const summaryText =
+      enhancementsTotal > 0
+        ? `+£${enhancementsTotal.toFixed(2)} unsocial enhancements on top of basic salary`
+        : 'Covered by basic monthly salary';
 
+    return {
+      extraGrossPay: enhancementsTotal,
+      fullShiftValue: roundCurrency(rawFullShiftValue),
+      enhancementsTotal,
+      additionalBasePay: 0,
+      additionalHours: 0,
+      overtimeHours: 0,
+      priorWeeklyHours: 0,
+      newWeeklyHours: 0,
+      contractedWeeklyHours: contractedWeekly,
+      summaryText,
+    };
+  }
+
+  // Case 4: Extra / Overtime Shift (Worked on top of contracted roster)
+  const priorWeeklyHours = calculatePriorWeeklyHours(existingShifts, date, initialShiftId);
   const newWeeklyHours = roundHours(priorWeeklyHours + totalWorked);
   const startHour = priorWeeklyHours;
   const endHour = newWeeklyHours;
 
-  // Hours in contracted to FTE range (plain time 1.0x)
-  const additionalHours = roundHours(
-    Math.max(0, Math.min(endHour, fteHours) - Math.max(startHour, contractedWeekly))
-  );
-  // Hours above FTE threshold (overtime 1.5x)
-  const overtimeHours = roundHours(Math.max(0, endHour - Math.max(startHour, fteHours)));
+  const isOvertimeEligible =
+    !profile?.band ||
+    ['Band 2', 'Band 3', 'Band 4', 'Band 5', 'Band 6', 'Band 7'].includes(profile.band);
+
+  let additionalHours = 0;
+  let overtimeHours = 0;
+
+  if (isOvertimeEligible) {
+    additionalHours = roundHours(
+      Math.max(0, Math.min(endHour, fteHours) - Math.min(startHour, fteHours))
+    );
+    overtimeHours = roundHours(Math.max(0, endHour - Math.max(startHour, fteHours)));
+  } else {
+    additionalHours = totalWorked;
+  }
 
   const rawAdditionalBasePay =
     additionalHours * effectiveRate + overtimeHours * (effectiveRate * 1.5);
@@ -164,13 +168,14 @@ export const calculateShiftGrossImpact = (
   const additionalBasePay = roundCurrency(rawAdditionalBasePay);
   const fullShiftValue = roundCurrency(rawFullShiftValue);
 
-  const summaryText = buildSubstantiveSummaryText({
-    extraGrossPay,
-    additionalBasePay,
-    enhancementsTotal,
-    totalWorked,
-    contractedWeekly,
-  });
+  const summaryParts: string[] = [];
+  if (additionalBasePay > 0) {
+    summaryParts.push(`+£${additionalBasePay.toFixed(2)} extra pay`);
+  }
+  if (enhancementsTotal > 0) {
+    summaryParts.push(`£${enhancementsTotal.toFixed(2)} unsocial enhancements`);
+  }
+  const summaryText = summaryParts.length > 0 ? summaryParts.join(' + ') : 'Extra shift';
 
   return {
     extraGrossPay,

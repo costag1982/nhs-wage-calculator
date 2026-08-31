@@ -284,7 +284,9 @@ const buildPayLineItems = (
   baseRates: GrossPayResult,
   substantiveEnhancements: SubstantiveEnhancements,
   overtimeResult: OvertimeCalculationResult,
-  bankResults: BankCalculationResult
+  bankResults: BankCalculationResult,
+  afcAbsencePay: number = 0,
+  annualLeaveHours: number = 0
 ): PayLineItem[] => {
   const payLineItems: PayLineItem[] = [];
 
@@ -370,6 +372,16 @@ const buildPayLineItems = (
         amount: roundCurrency(substantiveEnhancements.actingUpAmount),
       });
     }
+
+    if (afcAbsencePay > 0) {
+      payLineItems.push({
+        description: 'AfC Absence',
+        unitsWorked: roundHours(annualLeaveHours),
+        paidUnits: roundHours(annualLeaveHours),
+        rate: roundHourlyRate(afcAbsencePay / annualLeaveHours),
+        amount: roundCurrency(afcAbsencePay),
+      });
+    }
   }
 
   // Append Bank Pay Line Items (Bank Basic Pay and Bank Enhancements)
@@ -415,65 +427,91 @@ const calculateDeductions = (
 };
 
 /**
+ * Calculates AfC Absence enhancement top-up pay for annual leave taken in the month.
+ * Under NHS Agenda for Change Section 13 / Flowers ruling, holiday pay must include
+ * average unsocial enhancement earnings.
+ */
+const calculateAfcAbsencePay = (
+  annualLeaveHours: number,
+  substantiveEnhancementsTotal: number,
+  totalSubstantiveWorkedHours: number
+): number => {
+  if (annualLeaveHours <= 0 || substantiveEnhancementsTotal <= 0) {
+    return 0;
+  }
+  const totalAccountedHours = totalSubstantiveWorkedHours + annualLeaveHours;
+  if (totalAccountedHours <= 0) return 0;
+
+  const averageEnhancementRate = substantiveEnhancementsTotal / totalAccountedHours;
+  return roundCurrency(annualLeaveHours * averageEnhancementRate);
+};
+
+/**
  * Groups shifts by ISO week and calculates additional hours and overtime
- * pay owed on top of basic contracted pay, per NHS AfC Section 3.
+ * pay owed on top of basic contracted pay for shifts explicitly marked as OVERTIME.
  *
- * - Additional hours: hours above contracted weekly hrs up to FTE threshold → plain time (1.0×)
- * - Overtime: hours above FTE threshold (Bands 1–7 only) → time-and-a-half (1.5×)
- * - Bands 8a–9: all excess hours paid at plain time; no 1.5× premium
- *
- * Note:
- * - Bank shifts are excluded from substantive weekly hours calculation.
- * - Annual leave hours count towards meeting weekly contracted thresholds (e.g. 26.0h),
- *   allowing excess worked hours to qualify for Additional Hours / Overtime.
+ * In NHS Agenda for Change:
+ * - Standard substantive roster shifts ('SUBSTANTIVE') are covered by Basic Salary.
+ * - Extra / Overtime shifts ('OVERTIME') worked beyond contracted roster:
+ *   - Additional hours: hours up to FTE threshold (37.5h) → plain time (1.0×)
+ *   - Overtime: hours above FTE threshold (Bands 1–7 only) → time-and-a-half (1.5×)
+ *   - Bands 8a–9: all excess hours paid at plain time; no 1.5× premium
  */
 const calculateAdditionalAndOvertimePay = (
   shifts: Shift[],
   profile: EmployeeProfile,
   hourlyRate: number
 ): OvertimeCalculationResult => {
-  const weekMap = new Map<string, { workedHours: number; leaveHours: number }>();
+  const overtimeShifts = shifts.filter((s) => s.shiftType === 'OVERTIME');
+  if (overtimeShifts.length === 0) {
+    return {
+      additionalHours: 0,
+      additionalHoursPay: 0,
+      overtimeHours: 0,
+      overtimePay: 0,
+    };
+  }
+
+  const weekMap = new Map<string, { rosteredHours: number; overtimeHours: number }>();
   for (const shift of shifts) {
     if (shift.shiftType === 'BANK') continue;
 
     const breakdown = shift.breakdown || calculateShiftBreakdown(shift);
     const weekKey = getIsoWeekKey(shift.date);
-    const entry = weekMap.get(weekKey) ?? { workedHours: 0, leaveHours: 0 };
+    const entry = weekMap.get(weekKey) ?? { rosteredHours: 0, overtimeHours: 0 };
 
-    if (shift.shiftType === 'ANNUAL_LEAVE') {
-      entry.leaveHours += breakdown.totalWorkedHours;
+    if (shift.shiftType === 'OVERTIME') {
+      entry.overtimeHours += breakdown.totalWorkedHours;
     } else {
-      entry.workedHours += breakdown.totalWorkedHours;
+      entry.rosteredHours += breakdown.totalWorkedHours;
     }
     weekMap.set(weekKey, entry);
   }
 
-  const contractedWeekly = profile.contractedWeeklyHours;
-  const fteThreshold = profile.standardFullTimeHours;
-
+  const fteThreshold = profile.standardFullTimeHours || 37.5;
   const overtimeEligibleBands = ['Band 2', 'Band 3', 'Band 4', 'Band 5', 'Band 6', 'Band 7'];
   const isOvertimeEligible = overtimeEligibleBands.includes(profile.band);
 
   let totalAdditionalHours = 0;
   let totalOvertimeHours = 0;
 
-  for (const [, { workedHours, leaveHours }] of weekMap) {
-    const totalWeeklyAccounted = workedHours + leaveHours;
-    if (totalWeeklyAccounted <= contractedWeekly) continue;
+  for (const [, { rosteredHours, overtimeHours }] of weekMap) {
+    if (overtimeHours <= 0) continue;
 
-    const potentialExcess = totalWeeklyAccounted - contractedWeekly;
-    const paidExcess = Math.min(workedHours, potentialExcess);
-    if (paidExcess <= 0) continue;
+    const startPoint = rosteredHours;
+    const endPoint = rosteredHours + overtimeHours;
 
     if (isOvertimeEligible) {
-      const potentialOvertime = Math.max(0, totalWeeklyAccounted - fteThreshold);
-      const overtimeThisWeek = Math.min(paidExcess, potentialOvertime);
-      const additionalThisWeek = paidExcess - overtimeThisWeek;
+      const plainTimePart = Math.max(
+        0,
+        Math.min(endPoint, fteThreshold) - Math.min(startPoint, fteThreshold)
+      );
+      const overtimePart = Math.max(0, endPoint - Math.max(startPoint, fteThreshold));
 
-      totalAdditionalHours += additionalThisWeek;
-      totalOvertimeHours += overtimeThisWeek;
+      totalAdditionalHours += plainTimePart;
+      totalOvertimeHours += overtimePart;
     } else {
-      totalAdditionalHours += paidExcess;
+      totalAdditionalHours += overtimeHours;
     }
   }
 
@@ -531,25 +569,47 @@ export const calculateMonthlyPayslip = (
       ? aggregateSubstantiveEnhancements(substantiveShifts, profile, baseRates.hourlyRate)
       : getEmptyEnhancements();
 
-  // 3. Bank Pay & Bank Enhancements calculation (Separate Bank Assignment)
+  const substantiveEnhancementsSum = roundCurrency(
+    substantiveEnhancements.nightAmount +
+      substantiveEnhancements.satAmount +
+      substantiveEnhancements.sunAmount +
+      substantiveEnhancements.bhAmount +
+      substantiveEnhancements.actingUpAmount
+  );
+
+  const totalSubstantiveWorkedHours = roundHours(
+    substantiveShifts.reduce((acc, s) => {
+      const bd = s.breakdown || calculateShiftBreakdown(s);
+      return acc + bd.totalWorkedHours;
+    }, 0)
+  );
+
+  // 3. AfC Absence holiday enhancement pay (AfC Section 13)
+  const afcAbsencePay =
+    profile.contractType === 'SUBSTANTIVE'
+      ? calculateAfcAbsencePay(
+          annualLeaveHours,
+          substantiveEnhancementsSum,
+          totalSubstantiveWorkedHours
+        )
+      : 0;
+
+  // 4. Bank Pay & Bank Enhancements calculation (Separate Bank Assignment)
   const bankResults = aggregateBankPay(bankShifts, profile, baseRates.hourlyRate);
 
-  // 4. Build pay line items matching NHS ESR payslip
+  // 5. Build pay line items matching NHS ESR payslip
   const payLineItems = buildPayLineItems(
     profile,
     baseRates,
     substantiveEnhancements,
     overtimeResult,
-    bankResults
+    bankResults,
+    afcAbsencePay,
+    annualLeaveHours
   );
 
   const totalEnhancements = roundCurrency(
-    substantiveEnhancements.nightAmount +
-      substantiveEnhancements.satAmount +
-      substantiveEnhancements.sunAmount +
-      substantiveEnhancements.bhAmount +
-      substantiveEnhancements.actingUpAmount +
-      bankResults.totalEnhancementAmount
+    substantiveEnhancementsSum + afcAbsencePay + bankResults.totalEnhancementAmount
   );
 
   const grossPay = roundCurrency(payLineItems.reduce((acc, item) => acc + item.amount, 0));
@@ -582,6 +642,7 @@ export const calculateMonthlyPayslip = (
     pensionablePay: grossPay,
     taxablePay: deductions.taxablePay,
     annualLeaveHours,
+    ...(afcAbsencePay > 0 && { afcAbsencePay }),
     ...(profile.contractType === 'SUBSTANTIVE' &&
       overtimeResult.additionalHours > 0 && {
         additionalHours: overtimeResult.additionalHours,
