@@ -376,9 +376,6 @@ export const PayPeriodsView: React.FC<PayPeriodsViewProps> = ({
                                 <span className="meta-chip chip-pay">
                                   Paid: {row.payMonthLabel}
                                 </span>
-                                <span className="meta-chip chip-tax">
-                                  Tax Month {row.taxPeriod}
-                                </span>
                               </div>
                             </div>
                           </td>

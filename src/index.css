@@ -1685,12 +1685,6 @@ input[type='time']::-webkit-calendar-picker-indicator:hover {
   font-weight: 500;
 }
 
-.chip-tax {
-  background: #e0f2fe;
-  color: var(--nhs-blue);
-  font-weight: 700;
-}
-
 /* Dedicated Shifts Count Badge */
 .badge-shifts-count {
   display: inline-flex;
