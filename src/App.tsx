@@ -11,6 +11,7 @@ import { SettingsDrawer } from './components/settings/SettingsDrawer';
 import { SyncBadge } from './components/dashboard/SyncBadge';
 import { useCloudSync } from './hooks/useCloudSync';
 import { Shift } from './domain/models/Shift';
+import { PayPeriodsView } from './components/periods/PayPeriodsView';
 import {
   Calendar as CalendarIcon,
   List,
@@ -20,9 +21,10 @@ import {
   ChevronRight,
   RotateCcw,
   LogOut,
+  TrendingUp,
 } from 'lucide-react';
 
-type TabView = 'CALENDAR' | 'LIST' | 'PAYSLIP';
+export type TabView = 'CALENDAR' | 'LIST' | 'PERIODS' | 'ALL_SHIFTS' | 'PAYSLIP';
 
 const STORAGE_KEY_ACTIVE_MONTH = 'nhs_active_month';
 const STORAGE_KEY_ACTIVE_TAB = 'nhs_active_tab';
@@ -53,19 +55,34 @@ const getInitialActiveMonth = (): Date => {
   return new Date(2026, 5, 1);
 };
 
+const normalizeTabParam = (param: string | null): TabView | null => {
+  if (!param) return null;
+  const upper = param.toUpperCase().replace('-', '_');
+  if (
+    upper === 'CALENDAR' ||
+    upper === 'LIST' ||
+    upper === 'PERIODS' ||
+    upper === 'ALL_SHIFTS' ||
+    upper === 'PAYSLIP'
+  ) {
+    return upper as TabView;
+  }
+  return null;
+};
+
 const getInitialActiveTab = (): TabView => {
-  // 1. Check URL Query Parameters e.g. ?tab=payslip
+  // 1. Check URL Query Parameters e.g. ?tab=periods
   if (typeof window !== 'undefined') {
     const params = new URLSearchParams(window.location.search);
-    const tabParam = params.get('tab')?.toUpperCase() as TabView;
-    if (tabParam === 'CALENDAR' || tabParam === 'LIST' || tabParam === 'PAYSLIP') {
+    const tabParam = normalizeTabParam(params.get('tab'));
+    if (tabParam) {
       return tabParam;
     }
   }
 
   // 2. Fallback to localStorage
-  const saved = localStorage.getItem(STORAGE_KEY_ACTIVE_TAB) as TabView;
-  if (saved && (saved === 'CALENDAR' || saved === 'LIST' || saved === 'PAYSLIP')) {
+  const saved = normalizeTabParam(localStorage.getItem(STORAGE_KEY_ACTIVE_TAB));
+  if (saved) {
     return saved;
   }
 
@@ -105,8 +122,8 @@ export const App: React.FC = () => {
         }
       }
 
-      const tabParam = params.get('tab')?.toUpperCase() as TabView;
-      if (tabParam === 'CALENDAR' || tabParam === 'LIST' || tabParam === 'PAYSLIP') {
+      const tabParam = normalizeTabParam(params.get('tab'));
+      if (tabParam) {
         setActiveTab(tabParam);
       }
     };
@@ -210,6 +227,14 @@ export const App: React.FC = () => {
     }
   };
 
+  const handleSelectPeriodMonth = (
+    monthDate: Date,
+    targetTab: 'CALENDAR' | 'PAYSLIP' = 'CALENDAR'
+  ) => {
+    setActiveMonthDate(monthDate);
+    setActiveTab(targetTab);
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('__calc_auth_pass');
     sessionStorage.removeItem('__calc_auth_pass');
@@ -265,6 +290,20 @@ export const App: React.FC = () => {
 
           <button
             type="button"
+            className={`btn ${activeTab === 'PERIODS' || activeTab === 'ALL_SHIFTS' ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() =>
+              setActiveTab(
+                activeTab === 'PERIODS' || activeTab === 'ALL_SHIFTS' ? 'CALENDAR' : 'PERIODS'
+              )
+            }
+            title="View Pay Periods & Hours Reconciliation across all months"
+          >
+            <TrendingUp size={16} />
+            Pay Periods
+          </button>
+
+          <button
+            type="button"
             className="btn btn-secondary"
             onClick={() => setIsSettingsOpen(true)}
             title="Configure Band, salary, contracted hours & deductions"
@@ -286,51 +325,55 @@ export const App: React.FC = () => {
         </div>
       </header>
 
-      {/* Main KPI Metric Cards */}
-      <MetricCards summary={payslipSummary} />
+      {/* Main KPI Metric Cards (shown on Monthly Roster, Month Shifts, and Payslip) */}
+      {(activeTab === 'CALENDAR' || activeTab === 'LIST' || activeTab === 'PAYSLIP') && (
+        <MetricCards summary={payslipSummary} />
+      )}
 
-      {/* View Switcher Tabs & Period Summary Controls */}
-      <div className="view-tabs-container">
-        <div className="view-tabs">
-          <button
-            type="button"
-            className={`tab-btn ${activeTab === 'CALENDAR' ? 'active' : ''}`}
-            onClick={() => setActiveTab('CALENDAR')}
-          >
-            <CalendarIcon size={16} />
-            Monthly Roster
-          </button>
-          <button
-            type="button"
-            className={`tab-btn ${activeTab === 'LIST' ? 'active' : ''}`}
-            onClick={() => setActiveTab('LIST')}
-          >
-            <List size={16} />
-            Shifts List ({monthShifts.length})
-          </button>
-          <button
-            type="button"
-            className={`tab-btn ${activeTab === 'PAYSLIP' ? 'active' : ''}`}
-            onClick={() => setActiveTab('PAYSLIP')}
-          >
-            <FileText size={16} />
-            NHS ESR Payslip
-          </button>
+      {/* View Switcher Tabs & Period Summary Controls (for active month) */}
+      {(activeTab === 'CALENDAR' || activeTab === 'LIST' || activeTab === 'PAYSLIP') && (
+        <div className="view-tabs-container">
+          <div className="view-tabs">
+            <button
+              type="button"
+              className={`tab-btn ${activeTab === 'CALENDAR' ? 'active' : ''}`}
+              onClick={() => setActiveTab('CALENDAR')}
+            >
+              <CalendarIcon size={16} />
+              Monthly Roster
+            </button>
+            <button
+              type="button"
+              className={`tab-btn ${activeTab === 'LIST' ? 'active' : ''}`}
+              onClick={() => setActiveTab('LIST')}
+            >
+              <List size={16} />
+              Month Shifts ({monthShifts.length})
+            </button>
+            <button
+              type="button"
+              className={`tab-btn ${activeTab === 'PAYSLIP' ? 'active' : ''}`}
+              onClick={() => setActiveTab('PAYSLIP')}
+            >
+              <FileText size={16} />
+              NHS ESR Payslip
+            </button>
+          </div>
+
+          {activeTab === 'LIST' && monthShifts.length > 0 && (
+            <button
+              type="button"
+              className="btn btn-danger"
+              style={{ fontSize: '0.8125rem', padding: '0.4rem 0.8rem' }}
+              onClick={clearMonthShifts}
+              title="Clear all shifts for current month"
+            >
+              <RotateCcw size={14} />
+              Clear Month
+            </button>
+          )}
         </div>
-
-        {monthShifts.length > 0 && (
-          <button
-            type="button"
-            className="btn btn-danger"
-            style={{ fontSize: '0.8125rem', padding: '0.4rem 0.8rem' }}
-            onClick={clearMonthShifts}
-            title="Clear all shifts for current month"
-          >
-            <RotateCcw size={14} />
-            Clear Month
-          </button>
-        )}
-      </div>
+      )}
 
       {/* Active Tab Content */}
       <main>
@@ -350,6 +393,36 @@ export const App: React.FC = () => {
             onEditShift={handleOpenEditShift}
             onDeleteShift={deleteShift}
             onAddShiftClick={() => handleOpenAddShift()}
+          />
+        )}
+
+        {activeTab === 'PERIODS' && (
+          <PayPeriodsView
+            profile={profile}
+            shifts={allShifts}
+            commitments={commitments}
+            activeMonthDate={activeMonthDate}
+            onSelectPeriodMonth={handleSelectPeriodMonth}
+            onBackToRoster={() => setActiveTab('CALENDAR')}
+            onAddShiftClick={() => handleOpenAddShift()}
+            onEditShift={handleOpenEditShift}
+            onDeleteShift={deleteShift}
+            initialSubView="PERIODS"
+          />
+        )}
+
+        {activeTab === 'ALL_SHIFTS' && (
+          <PayPeriodsView
+            profile={profile}
+            shifts={allShifts}
+            commitments={commitments}
+            activeMonthDate={activeMonthDate}
+            onSelectPeriodMonth={handleSelectPeriodMonth}
+            onBackToRoster={() => setActiveTab('CALENDAR')}
+            onAddShiftClick={() => handleOpenAddShift()}
+            onEditShift={handleOpenEditShift}
+            onDeleteShift={deleteShift}
+            initialSubView="ALL_SHIFTS"
           />
         )}
 

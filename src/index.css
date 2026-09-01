@@ -1389,6 +1389,536 @@ input[type='time']::-webkit-calendar-picker-indicator:hover {
   flex-shrink: 0;
 }
 
+/* Pay Periods Reconciliation & Multi-Month Shifts Styling */
+.pay-periods-container,
+.all-shifts-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.pay-periods-header-card {
+  background: #ffffff;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.5rem;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.pay-periods-header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  max-width: 720px;
+}
+
+.pay-periods-icon-badge {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  background: var(--nhs-blue-light);
+  color: var(--nhs-blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pay-periods-title {
+  font-family: var(--font-heading);
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 0.25rem;
+}
+
+.pay-periods-subtitle {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.pay-periods-actions-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.filter-select-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.filter-icon {
+  position: absolute;
+  left: 0.75rem;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.filter-select {
+  padding: 0.5rem 1rem 0.5rem 2.25rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  background-color: #ffffff;
+  color: var(--text-main);
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.period-subview-toggle {
+  display: inline-flex;
+  align-items: center;
+  background-color: var(--bg-card-subtle);
+  padding: 3px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-light);
+  gap: 2px;
+}
+
+.subview-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border-radius: calc(var(--radius-md) - 2px);
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.subview-btn:hover {
+  color: var(--text-main);
+}
+
+.subview-btn.active {
+  background-color: #ffffff;
+  color: var(--nhs-blue);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* Pay Periods KPI Grid */
+.period-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.period-kpi-card {
+  background: #ffffff;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.25rem;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  transition: transform 0.15s ease;
+}
+
+.period-kpi-card:hover {
+  transform: translateY(-2px);
+}
+
+.period-kpi-card.card-warning-border {
+  border-color: var(--amber-border);
+  background: #fffdfa;
+}
+
+.period-kpi-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.period-kpi-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.period-kpi-value {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--text-main);
+  letter-spacing: -0.02em;
+}
+
+.period-kpi-footer {
+  font-size: 0.725rem;
+  color: var(--text-muted);
+}
+
+/* Period Table Details */
+.period-reconciliation-table th {
+  padding: 0.85rem 1rem;
+}
+
+.period-reconciliation-table td {
+  padding: 0.95rem 1rem;
+  vertical-align: middle;
+}
+
+.period-row-active {
+  background-color: #f0f7ff !important;
+}
+
+.period-row-active td {
+  border-color: #d0e5ff;
+}
+
+.period-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.period-month-title {
+  font-size: 0.95rem;
+  color: var(--text-main);
+}
+
+.period-active-pill {
+  background: var(--nhs-blue-light);
+  color: var(--nhs-blue);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+
+.period-sub-detail {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+}
+
+.period-tax-tag {
+  background: var(--bg-card-subtle);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.period-shift-count {
+  font-weight: 500;
+}
+
+/* Badges for Extra Hours & Unpaid */
+.badge-extra-hours {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.badge-positive {
+  background-color: var(--emerald-light);
+  color: var(--emerald);
+  border: 1px solid var(--emerald-border);
+}
+
+.badge-negative {
+  background-color: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+
+.badge-neutral {
+  background-color: #f8fafc;
+  color: #94a3b8;
+}
+
+.unpaid-cell-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.15rem;
+}
+
+.badge-unpaid-warning {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background-color: var(--amber-light);
+  color: var(--amber);
+  border: 1px solid var(--amber-border);
+  padding: 0.25rem 0.55rem;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 0.8125rem;
+}
+
+.badge-unpaid-cleared {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--emerald);
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+
+.unpaid-val-sub {
+  font-size: 0.725rem;
+  color: var(--amber);
+  font-weight: 600;
+}
+
+.enhancements-cell-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.3rem;
+}
+
+.enhancements-val {
+  font-size: 0.95rem;
+  color: var(--indigo);
+}
+
+.enhancements-pill-row {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.period-action-buttons {
+  display: inline-flex;
+  gap: 0.35rem;
+}
+
+.period-jump-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-medium);
+  background-color: #ffffff;
+  color: var(--text-main);
+  transition: all 0.15s;
+}
+
+.period-jump-btn:hover {
+  background-color: var(--nhs-blue-light);
+  color: var(--nhs-blue);
+  border-color: var(--nhs-blue);
+}
+
+.period-totals-row td {
+  background-color: var(--bg-card-subtle);
+  border-top: 2px solid var(--border-medium);
+  padding: 1rem;
+  font-size: 0.9rem;
+}
+
+.period-empty-state {
+  padding: 3.5rem 1.5rem;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.period-empty-state h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 0.5rem;
+}
+
+.period-empty-state p {
+  font-size: 0.875rem;
+  margin-bottom: 1.5rem;
+}
+
+/* All Shifts View Toolbar & Filters */
+.all-shifts-filter-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  background: #ffffff;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.search-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 260px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 0.75rem;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.5rem 1rem 0.5rem 2.25rem;
+  font-size: 0.875rem;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.search-input:focus {
+  border-color: var(--nhs-blue);
+  box-shadow: 0 0 0 2px rgba(0, 94, 184, 0.15);
+}
+
+.filters-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.shifts-stats-ribbon {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.stat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  background: #ffffff;
+  border: 1px solid var(--border-light);
+  border-radius: 999px;
+  font-size: 0.775rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.stat-pill-label {
+  color: var(--text-muted);
+}
+
+.week-number-badge {
+  display: inline-block;
+  background: #f1f5f9;
+  color: #334155;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+}
+
+.end-date-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.overnight-tag {
+  background: #fef3c7;
+  color: #b45309;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 1px 4px;
+  border-radius: 3px;
+  letter-spacing: 0.02em;
+}
+
+.shift-name-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.badge-tag {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.tag-leave {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.tag-overtime {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.tag-bank {
+  background: #e0e7ff;
+  color: #4338ca;
+}
+
+.tag-band {
+  background: #e0f2fe;
+  color: var(--nhs-blue);
+}
+
+.text-indigo {
+  color: var(--indigo);
+}
+
+.text-amber {
+  color: var(--amber);
+}
+
+.text-emerald {
+  color: var(--emerald);
+}
+
 /* Print Styling */
 @media print {
   body {
@@ -1400,10 +1930,14 @@ input[type='time']::-webkit-calendar-picker-indicator:hover {
   .view-tabs-container,
   .btn,
   .add-shift-btn-ghost,
-  .settings-btn {
+  .settings-btn,
+  .pay-periods-actions-bar,
+  .all-shifts-filter-bar,
+  .period-action-buttons {
     display: none !important;
   }
-  .esr-payslip-wrapper {
+  .esr-payslip-wrapper,
+  .roster-table-card {
     box-shadow: none !important;
     border: 2px solid #000000 !important;
     margin: 0 auto !important;
@@ -1432,5 +1966,13 @@ input[type='time']::-webkit-calendar-picker-indicator:hover {
   }
   .preset-buttons-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+  .pay-periods-header-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .pay-periods-actions-bar {
+    width: 100%;
+    justify-content: flex-start;
   }
 }

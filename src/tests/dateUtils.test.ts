@@ -11,6 +11,9 @@ import {
   formatPeriodEndDate,
   formatPayDate,
   getUkTaxPeriod,
+  getIsoWeekNumber,
+  formatDateBritish,
+  getShiftDateRange,
 } from '../domain/utils/dateUtils';
 
 describe('dateUtils', () => {
@@ -139,6 +142,52 @@ describe('dateUtils', () => {
       expect(getUkTaxPeriod(new Date(2026, 11, 1))).toBe(9); // December = 9
       expect(getUkTaxPeriod(new Date(2026, 0, 1))).toBe(10); // January = 10
       expect(getUkTaxPeriod(new Date(2026, 2, 1))).toBe(12); // March = 12
+    });
+  });
+
+  describe('getIsoWeekNumber', () => {
+    it('returns ISO week number (1-53)', () => {
+      expect(getIsoWeekNumber('2026-06-06')).toBe(23);
+      expect(getIsoWeekNumber('2026-07-01')).toBe(27);
+      expect(getIsoWeekNumber('2026-01-01')).toBe(1);
+    });
+  });
+
+  describe('formatDateBritish', () => {
+    it('formats ISO string with weekday, day, month and year', () => {
+      expect(formatDateBritish('2026-06-06')).toBe('Sat 6 Jun 2026');
+      expect(formatDateBritish('2026-06-06', { includeYear: false, includeWeekday: true })).toBe(
+        'Sat 6 Jun'
+      );
+    });
+  });
+
+  describe('getShiftDateRange', () => {
+    it('handles daytime shifts with same start and end dates', () => {
+      const result = getShiftDateRange('2026-06-02', '07:30', '15:30');
+      expect(result.isOvernight).toBe(false);
+      expect(result.startDateIso).toBe('2026-06-02');
+      expect(result.endDateIso).toBe('2026-06-02');
+      expect(result.formattedStartDate).toBe('Tue 2 Jun 2026');
+      expect(result.formattedEndDate).toBe('Tue 2 Jun 2026');
+    });
+
+    it('correctly handles overnight twilight shifts crossing midnight into next day', () => {
+      const result = getShiftDateRange('2026-06-06', '22:00', '06:00');
+      expect(result.isOvernight).toBe(true);
+      expect(result.startDateIso).toBe('2026-06-06');
+      expect(result.endDateIso).toBe('2026-06-07');
+      expect(result.formattedStartDate).toBe('Sat 6 Jun 2026');
+      expect(result.formattedEndDate).toBe('Sun 7 Jun 2026');
+    });
+
+    it('handles month/year boundary for overnight shift (e.g. 31 Dec -> 1 Jan)', () => {
+      const result = getShiftDateRange('2026-12-31', '20:00', '08:00');
+      expect(result.isOvernight).toBe(true);
+      expect(result.startDateIso).toBe('2026-12-31');
+      expect(result.endDateIso).toBe('2027-01-01');
+      expect(result.formattedStartDate).toBe('Thu 31 Dec 2026');
+      expect(result.formattedEndDate).toBe('Fri 1 Jan 2027');
     });
   });
 });

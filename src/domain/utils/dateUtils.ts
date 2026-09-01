@@ -128,3 +128,85 @@ export const getUkTaxPeriod = (monthYear: Date): number => {
   const calendarMonth = monthYear.getMonth();
   return calendarMonth >= 3 ? calendarMonth - 2 : calendarMonth + 10;
 };
+
+/**
+ * Returns numeric ISO 8601 week number (1-53) for a given date string ("YYYY-MM-DD").
+ */
+export const getIsoWeekNumber = (dateStr: string): number => {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  const dayOfWeek = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - dayOfWeek);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  const millisecondsPerDay = 86_400_000;
+  return Math.ceil(((date.getTime() - yearStart.getTime()) / millisecondsPerDay + 1) / 7);
+};
+
+/**
+ * Formats a Date object or ISO date string ("YYYY-MM-DD") in British English (e.g. "Sat 6 Jun 2026" or "Sat 6 Jun").
+ */
+export const formatDateBritish = (
+  dateInput: Date | string,
+  options: { includeYear?: boolean; includeWeekday?: boolean } = {
+    includeYear: true,
+    includeWeekday: true,
+  }
+): string => {
+  let dateObj: Date;
+  if (typeof dateInput === 'string') {
+    const [y, m, d] = dateInput.split('-').map(Number);
+    dateObj = new Date(Date.UTC(y, m - 1, d));
+  } else {
+    dateObj = dateInput;
+  }
+
+  const { includeYear = true, includeWeekday = true } = options;
+  const raw = dateObj.toLocaleDateString('en-GB', {
+    ...(includeWeekday ? { weekday: 'short' } : {}),
+    day: 'numeric',
+    month: 'short',
+    ...(includeYear ? { year: 'numeric' } : {}),
+    timeZone: 'UTC',
+  });
+  // Strip any locale comma e.g. "Sat, 6 Jun 2026" -> "Sat 6 Jun 2026"
+  return raw.replace(/,/g, '');
+};
+
+export interface ShiftDateRangeResult {
+  startDateIso: string;
+  endDateIso: string;
+  isOvernight: boolean;
+  formattedStartDate: string;
+  formattedEndDate: string;
+}
+
+/**
+ * Calculates the exact start and end calendar dates for a shift,
+ * accurately determining if an overnight shift (e.g. Twilight 22:00 - 06:00)
+ * spans across two calendar days.
+ */
+export const getShiftDateRange = (
+  dateIso: string,
+  startTime: string,
+  endTime: string
+): ShiftDateRangeResult => {
+  const [y, m, d] = dateIso.split('-').map(Number);
+  const startDate = new Date(Date.UTC(y, m - 1, d));
+
+  const [startHour, startMin] = startTime.split(':').map(Number);
+  const [endHour, endMin] = endTime.split(':').map(Number);
+  const startTotalMinutes = startHour * 60 + startMin;
+  const endTotalMinutes = endHour * 60 + endMin;
+
+  const isOvernight = endTotalMinutes <= startTotalMinutes;
+  const endDate = isOvernight ? addDays(startDate, 1) : startDate;
+  const endDateIso = formatDateIso(endDate);
+
+  return {
+    startDateIso: dateIso,
+    endDateIso,
+    isOvernight,
+    formattedStartDate: formatDateBritish(startDate, { includeYear: true, includeWeekday: true }),
+    formattedEndDate: formatDateBritish(endDate, { includeYear: true, includeWeekday: true }),
+  };
+};
