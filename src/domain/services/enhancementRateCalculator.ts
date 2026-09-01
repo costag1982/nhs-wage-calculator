@@ -13,7 +13,7 @@ const createPayLineItem = (
   const roundedUnitsWorked = roundHours(unitsWorked);
   const rawPaidUnits = unitsWorked * enhancementRate;
   const paidUnits = roundHours(rawPaidUnits);
-  const amount = roundCurrency(paidUnits * hourlyRate);
+  const amount = roundCurrency(rawPaidUnits * hourlyRate);
 
   return {
     description,

@@ -25,7 +25,7 @@ describe('Per-Shift Pay Band Override & Acting Up Calculations', () => {
   };
 
   it('calculates acting up allowance and higher enhancements when a Band 2 employee works a Band 3 shift', () => {
-    // 1x 7.5h Morning shift at Band 3 (£13.5525/hr)
+    // 1x 7.5h Morning shift at the 2026/27 Band 3 entry rate.
     const band3Shift: Shift = {
       id: 'shift-band3-morning',
       date: '2026-07-07',
@@ -43,20 +43,20 @@ describe('Per-Shift Pay Band Override & Acting Up Calculations', () => {
     expect(basicPayItem?.amount).toBe(1460.16);
 
     // Higher Band / Acting Up Allowance should be added for the 7.5h difference
-    // Band 3 rate (£13.5525) - Band 2 rate (£12.9245) = £0.628/hr * 7.5h = £4.71
+    // The current Band 3 entry-rate difference is applied for the worked hours.
     const actingUpItem = payslip.payLineItems.find(
       (p) => p.description === 'Higher Band / Acting Up Allowance'
     );
     expect(actingUpItem).toBeDefined();
     expect(actingUpItem?.unitsWorked).toBe(7.5);
-    expect(actingUpItem?.amount).toBe(4.71);
+    expect(actingUpItem?.amount).toBe(1.87);
 
     // Gross pay includes basic pay + acting up allowance
-    expect(payslip.grossPay).toBe(1464.87);
+    expect(payslip.grossPay).toBe(1462.03);
   });
 
   it('calculates Band 3 night enhancements at the higher Band 3 hourly rate', () => {
-    // 1x 10h Night Duty at Band 3 (£13.5525/hr, +41% enhancement)
+    // 1x 10h Night Duty at Band 3's 2026/27 entry rate and 35% enhancement.
     const band3NightShift: Shift = {
       id: 'shift-band3-night',
       date: '2026-07-06',
@@ -73,10 +73,10 @@ describe('Per-Shift Pay Band Override & Acting Up Calculations', () => {
       new Date(2026, 6, 1)
     );
 
-    // Night enhancement: 10h * 0.41 = 4.10 units @ Band 3 rate (£13.5525/hr) = £55.57
+    // Band 3 is 35%, distinct from Band 2's 41% rate.
     const nightItem = payslip.payLineItems.find((p) => p.description === 'Night Duty EN');
     expect(nightItem).toBeDefined();
     expect(nightItem?.unitsWorked).toBe(10);
-    expect(nightItem?.amount).toBe(55.57);
+    expect(nightItem?.amount).toBe(46.11);
   });
 });

@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useContractSettings } from './hooks/useContractSettings';
 import { useRoster } from './hooks/useRoster';
-import { calculateMonthlyPayslip } from './domain/services/wageCalculatorService';
+import { calculatePayslipHistory } from './domain/services/wageCalculatorService';
 import { MetricCards } from './components/dashboard/MetricCards';
 import { CalendarView } from './components/calendar/CalendarView';
 import { ShiftListView } from './components/dashboard/ShiftListView';
@@ -183,8 +183,8 @@ export const App: React.FC = () => {
 
   // Master domain calculation
   const payslipSummary = useMemo(() => {
-    return calculateMonthlyPayslip(profile, monthShifts, commitments, activeMonthDate);
-  }, [profile, monthShifts, commitments, activeMonthDate]);
+    return calculatePayslipHistory(profile, allShifts, commitments, activeMonthDate);
+  }, [profile, allShifts, commitments, activeMonthDate]);
 
   // Handlers for shift modal
   const handleOpenAddShift = (dateStr?: string) => {

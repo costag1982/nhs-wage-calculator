@@ -212,7 +212,7 @@ export const EsrPayslip: React.FC<EsrPayslipProps> = ({ profile, summary }) => {
                 marginBottom: '4px',
               }}
             >
-              Year To Date Balances (This Employment Only)
+              Forecast Year To Date Balances (Stored Roster Data)
             </div>
             <div
               style={{
@@ -225,23 +225,18 @@ export const EsrPayslip: React.FC<EsrPayslipProps> = ({ profile, summary }) => {
               <div>
                 <span style={{ color: '#555' }}>GROSS PAY: </span>
                 <span className="tabular-nums font-bold">
-                  {formatCurrency(summary.grossPay * summary.taxPeriod)}
+                  {formatCurrency(summary.yearToDate.grossPay)}
                 </span>
               </div>
               <div>
                 <span style={{ color: '#555' }}>TAXABLE PAY: </span>
                 <span className="tabular-nums">
-                  {formatCurrency(summary.taxablePay * summary.taxPeriod)}
+                  {formatCurrency(summary.yearToDate.taxablePay)}
                 </span>
               </div>
               <div>
                 <span style={{ color: '#555' }}>TAX PAID: </span>
-                <span className="tabular-nums">
-                  {formatCurrency(
-                    (summary.deductionsList.find((d) => d.name === 'PAYE')?.amount ?? 0) *
-                      summary.taxPeriod
-                  )}
-                </span>
+                <span className="tabular-nums">{formatCurrency(summary.yearToDate.taxPaid)}</span>
               </div>
               <div>
                 <span style={{ color: '#555' }}>NI LETTER: </span>
@@ -249,32 +244,24 @@ export const EsrPayslip: React.FC<EsrPayslipProps> = ({ profile, summary }) => {
               </div>
               <div>
                 <span style={{ color: '#555' }}>NI PAY: </span>
-                <span className="tabular-nums">
-                  {formatCurrency(summary.grossPay * summary.taxPeriod)}
-                </span>
+                <span className="tabular-nums">{formatCurrency(summary.yearToDate.niPay)}</span>
               </div>
               <div>
                 <span style={{ color: '#555' }}>NI CONTS: </span>
                 <span className="tabular-nums">
-                  {formatCurrency(
-                    (summary.deductionsList.find((d) => d.name.startsWith('NI'))?.amount ?? 0) *
-                      summary.taxPeriod
-                  )}
+                  {formatCurrency(summary.yearToDate.niContributions)}
                 </span>
               </div>
               <div>
                 <span style={{ color: '#555' }}>PENSIONABLE: </span>
                 <span className="tabular-nums">
-                  {formatCurrency(summary.pensionablePay * summary.taxPeriod)}
+                  {formatCurrency(summary.yearToDate.pensionablePay)}
                 </span>
               </div>
               <div>
                 <span style={{ color: '#555' }}>PENSION CONTS: </span>
                 <span className="tabular-nums">
-                  {formatCurrency(
-                    (summary.deductionsList.find((d) => d.name.includes('Pension'))?.amount ?? 0) *
-                      summary.taxPeriod
-                  )}
+                  {formatCurrency(summary.yearToDate.pensionContributions)}
                 </span>
               </div>
             </div>

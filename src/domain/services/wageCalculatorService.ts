@@ -1,11 +1,11 @@
-import { EmployeeProfile, NhsBandLevel } from '../models/Contract';
+import { EmployeeProfile } from '../models/Contract';
 import { Shift, ShiftHoursBreakdown } from '../models/Shift';
 import { RecurringCommitment, DeductionBreakdownItem } from '../models/Deductions';
-import { PayslipSummary, PayLineItem } from '../models/Payslip';
+import { PayslipSummary, PayLineItem, PayslipYearToDate } from '../models/Payslip';
 import { calculateBaseRates, getHourlyRateForBand, GrossPayResult } from './grossPayCalculator';
 import { calculateEnhancements } from './enhancementRateCalculator';
 import { calculatePensionContribution } from './pensionCalculator';
-import { calculateMonthlyPaye } from './taxCalculator';
+import { calculatePaye } from './taxCalculator';
 import { calculateClass1CategoryA } from './nationalInsuranceCalculator';
 import { calculateShiftBreakdown } from './shiftIntervalCalculator';
 import { roundCurrency, roundHours, roundHourlyRate } from '../utils/mathUtils';
@@ -49,11 +49,20 @@ interface OvertimeCalculationResult {
   overtimePay: number;
 }
 
-interface ShiftRateGroup {
-  band: NhsBandLevel;
-  rate: number;
-  breakdown: ShiftHoursBreakdown;
+export interface PayrollCalculationContext {
+  allShifts?: Shift[];
+  previousYearToDate?: PayslipYearToDate;
 }
+
+const EMPTY_YEAR_TO_DATE: PayslipYearToDate = {
+  grossPay: 0,
+  taxablePay: 0,
+  taxPaid: 0,
+  niPay: 0,
+  niContributions: 0,
+  pensionablePay: 0,
+  pensionContributions: 0,
+};
 
 export const aggregateShiftHours = (shifts: Shift[]): ShiftHoursBreakdown => {
   const total: ShiftHoursBreakdown = {
@@ -102,72 +111,25 @@ const getEmptyEnhancements = (): SubstantiveEnhancements => ({
   actingUpAmount: 0,
 });
 
-const groupShiftsByBandAndRate = (
-  shifts: Shift[],
-  profile: EmployeeProfile,
-  baseHourlyRate: number
-): ShiftRateGroup[] => {
-  const groups = new Map<string, ShiftRateGroup>();
-
-  for (const shift of shifts) {
-    const breakdown = shift.breakdown || calculateShiftBreakdown(shift);
-    const shiftBand = shift.overrideBand || profile.band;
-    const shiftRate =
-      shift.customHourlyRate ??
-      (shift.overrideBand ? getHourlyRateForBand(shift.overrideBand) : baseHourlyRate);
-
-    const key = `${shiftBand}_${shiftRate}`;
-    let group = groups.get(key);
-    if (!group) {
-      group = {
-        band: shiftBand,
-        rate: shiftRate,
-        breakdown: {
-          totalWorkedHours: 0,
-          plainDayHours: 0,
-          nightHours: 0,
-          saturdayHours: 0,
-          sundayHours: 0,
-          bankHolidayHours: 0,
-        },
-      };
-      groups.set(key, group);
-    }
-
-    group.breakdown.totalWorkedHours += breakdown.totalWorkedHours;
-    group.breakdown.plainDayHours += breakdown.plainDayHours;
-    group.breakdown.nightHours += breakdown.nightHours;
-    group.breakdown.saturdayHours += breakdown.saturdayHours;
-    group.breakdown.sundayHours += breakdown.sundayHours;
-    group.breakdown.bankHolidayHours += breakdown.bankHolidayHours;
-  }
-
-  return Array.from(groups.values());
-};
-
 const aggregateSubstantiveEnhancements = (
   substantiveShifts: Shift[],
   profile: EmployeeProfile,
   baseHourlyRate: number
 ): SubstantiveEnhancements => {
   const agg = getEmptyEnhancements();
-  const groups = groupShiftsByBandAndRate(substantiveShifts, profile, baseHourlyRate);
+  for (const shift of substantiveShifts) {
+    const breakdown = shift.breakdown || calculateShiftBreakdown(shift);
+    const band = shift.overrideBand || profile.band;
+    const rate =
+      shift.customHourlyRate ??
+      (shift.overrideBand ? getHourlyRateForBand(shift.overrideBand) : baseHourlyRate);
 
-  // Calculate acting-up allowance for substantive shifts paid at higher rates
-  for (const group of groups) {
-    if (group.rate > baseHourlyRate) {
-      const diff = group.rate - baseHourlyRate;
-      agg.actingUpHours += group.breakdown.totalWorkedHours;
-      agg.actingUpAmount += group.breakdown.totalWorkedHours * diff;
+    if (rate > baseHourlyRate) {
+      agg.actingUpHours += breakdown.totalWorkedHours;
+      agg.actingUpAmount += breakdown.totalWorkedHours * (rate - baseHourlyRate);
     }
-  }
 
-  for (const group of groups) {
-    const { payLineItems: groupEnhancements } = calculateEnhancements(
-      group.band,
-      group.rate,
-      group.breakdown
-    );
+    const { payLineItems: groupEnhancements } = calculateEnhancements(band, rate, breakdown);
 
     for (const item of groupEnhancements) {
       if (item.description === 'Night Duty EN') {
@@ -222,52 +184,83 @@ const aggregateBankPay = (
     };
   }
 
-  const groups = groupShiftsByBandAndRate(bankShifts, profile, baseHourlyRate);
-
   const payLineItems: PayLineItem[] = [];
+  const appendPayLineItem = (item: PayLineItem): void => {
+    const existing = payLineItems.find(
+      (candidate) => candidate.description === item.description && candidate.rate === item.rate
+    );
+    if (!existing) {
+      payLineItems.push(item);
+      return;
+    }
+    existing.unitsWorked = roundHours(existing.unitsWorked + item.unitsWorked);
+    existing.paidUnits = roundHours(existing.paidUnits + item.paidUnits);
+    existing.amount = roundCurrency(existing.amount + item.amount);
+  };
   let totalBasicPay = 0;
   let totalEnhancementAmount = 0;
   let totalHours = 0;
 
-  for (const group of groups) {
-    const groupHours = roundHours(group.breakdown.totalWorkedHours);
-    const groupBasicAmount = roundCurrency(groupHours * group.rate);
-    totalHours += groupHours;
-    totalBasicPay += groupBasicAmount;
+  for (const shift of bankShifts) {
+    const breakdown = shift.breakdown || calculateShiftBreakdown(shift);
+    const band = shift.overrideBand || profile.band;
+    const basicRate =
+      shift.customHourlyRate ??
+      (shift.overrideBand ? getHourlyRateForBand(shift.overrideBand) : baseHourlyRate);
+    const enhancementRate = shift.customEnhancementHourlyRate ?? basicRate;
+    const hours = roundHours(breakdown.totalWorkedHours);
+    const basicAmount = roundCurrency(hours * basicRate);
+    totalHours += hours;
+    totalBasicPay += basicAmount;
 
     const isPureBank = profile.contractType === 'BANK_HOURLY';
     let basicDescription = isPureBank ? 'Basic Hourly Pay' : 'Bank Basic Pay';
-    if (!isPureBank && group.band !== profile.band) {
-      basicDescription = `Bank Basic Pay (${group.band})`;
+    if (!isPureBank && band !== profile.band) {
+      basicDescription = `Bank Basic Pay (${band})`;
     }
 
-    payLineItems.push({
+    appendPayLineItem({
       description: basicDescription,
-      unitsWorked: groupHours,
-      paidUnits: groupHours,
-      rate: group.rate,
-      amount: groupBasicAmount,
+      unitsWorked: hours,
+      paidUnits: hours,
+      rate: basicRate,
+      amount: basicAmount,
     });
 
     // Enhancements on bank shifts
     const { payLineItems: groupEnhancements } = calculateEnhancements(
-      group.band,
-      group.rate,
-      group.breakdown
+      band,
+      enhancementRate,
+      breakdown
     );
 
     for (const item of groupEnhancements) {
       if (item.amount > 0) {
-        totalEnhancementAmount += item.amount;
+        const amount = shift.customEnhancementHourlyRate
+          ? roundCurrency(item.paidUnits * enhancementRate)
+          : item.amount;
+        totalEnhancementAmount += amount;
         const enhancementDescription = isPureBank ? item.description : `Bank ${item.description}`;
-        payLineItems.push({
+        appendPayLineItem({
           description: enhancementDescription,
           unitsWorked: item.unitsWorked,
           paidUnits: item.paidUnits,
           rate: item.rate,
-          amount: item.amount,
+          amount,
         });
       }
+    }
+
+    if (shift.holidayPayHourlyRate && shift.holidayPayHourlyRate > 0) {
+      const holidayPayAmount = roundCurrency(hours * shift.holidayPayHourlyRate);
+      totalEnhancementAmount += holidayPayAmount;
+      appendPayLineItem({
+        description: isPureBank ? 'Holiday Pay' : 'Bank Holiday Pay',
+        unitsWorked: hours,
+        paidUnits: hours,
+        rate: shift.holidayPayHourlyRate,
+        amount: holidayPayAmount,
+      });
     }
   }
 
@@ -394,14 +387,26 @@ const buildPayLineItems = (
 
 const calculateDeductions = (
   grossPay: number,
+  pensionablePay: number,
   profile: EmployeeProfile,
-  commitments: RecurringCommitment[]
+  commitments: RecurringCommitment[],
+  taxPeriod: number,
+  previousYearToDate: PayslipYearToDate
 ): { taxablePay: number; deductionsList: DeductionBreakdownItem[]; totalDeductions: number } => {
-  const pensionAmount = calculatePensionContribution(grossPay, profile.pensionContributionRate);
+  const pensionAmount = calculatePensionContribution(
+    pensionablePay,
+    profile.pensionContributionRate
+  );
 
   // Net pay arrangement for pension gives pre-tax deduction
   const taxablePay = Math.max(0, roundCurrency(grossPay - pensionAmount));
-  const payeTax = calculateMonthlyPaye(taxablePay, profile.taxCode);
+  const payeTax = calculatePaye({
+    taxablePay,
+    taxCode: profile.taxCode,
+    taxPeriod,
+    previousTaxablePay: previousYearToDate.taxablePay,
+    previousTaxPaid: previousYearToDate.taxPaid,
+  });
   const nationalInsurance = calculateClass1CategoryA(grossPay);
 
   const deductionsList: DeductionBreakdownItem[] = [
@@ -433,17 +438,41 @@ const calculateDeductions = (
  */
 const calculateAfcAbsencePay = (
   annualLeaveHours: number,
-  substantiveEnhancementsTotal: number,
-  totalSubstantiveWorkedHours: number
+  profile: EmployeeProfile,
+  allShifts: Shift[],
+  monthYear: Date,
+  baseHourlyRate: number
 ): number => {
-  if (annualLeaveHours <= 0 || substantiveEnhancementsTotal <= 0) {
-    return 0;
+  if (annualLeaveHours <= 0) return 0;
+  if (profile.afcAbsenceHourlyRateOverride !== undefined) {
+    return roundCurrency(annualLeaveHours * profile.afcAbsenceHourlyRateOverride);
   }
-  const totalAccountedHours = totalSubstantiveWorkedHours + annualLeaveHours;
-  if (totalAccountedHours <= 0) return 0;
 
-  const averageEnhancementRate = substantiveEnhancementsTotal / totalAccountedHours;
-  return roundCurrency(annualLeaveHours * averageEnhancementRate);
+  const referenceStart = new Date(monthYear.getFullYear(), monthYear.getMonth() - 3, 1);
+  const referenceEnd = new Date(monthYear.getFullYear(), monthYear.getMonth(), 1);
+  const referenceShifts = allShifts.filter((shift) => {
+    const shiftDate = new Date(`${shift.date}T00:00:00`);
+    return (
+      shiftDate >= referenceStart &&
+      shiftDate < referenceEnd &&
+      shift.shiftType !== 'BANK' &&
+      shift.shiftType !== 'ANNUAL_LEAVE'
+    );
+  });
+  const referenceHours = referenceShifts.reduce(
+    (total, shift) => total + (shift.breakdown || calculateShiftBreakdown(shift)).totalWorkedHours,
+    0
+  );
+  if (referenceHours <= 0) return 0;
+
+  const enhancements = aggregateSubstantiveEnhancements(referenceShifts, profile, baseHourlyRate);
+  const referenceSupplements =
+    enhancements.nightAmount +
+    enhancements.satAmount +
+    enhancements.sunAmount +
+    enhancements.bhAmount +
+    enhancements.actingUpAmount;
+  return roundCurrency(annualLeaveHours * (referenceSupplements / referenceHours));
 };
 
 /**
@@ -535,10 +564,18 @@ export const calculateMonthlyPayslip = (
   profile: EmployeeProfile,
   shifts: Shift[],
   commitments: RecurringCommitment[],
-  monthYear: Date
+  monthYear: Date,
+  context: PayrollCalculationContext = {}
 ): PayslipSummary => {
   const baseRates = calculateBaseRates(profile);
   const hoursBreakdown = aggregateShiftHours(shifts);
+  const previousYearToDate = context.previousYearToDate ?? EMPTY_YEAR_TO_DATE;
+  const paymentMonthDate = getPaymentMonthDate(monthYear);
+  const rosterMonthString = formatMonthYearString(monthYear);
+  const monthYearString = formatMonthYearString(paymentMonthDate);
+  const periodEndDate = formatPeriodEndDate(paymentMonthDate);
+  const payDate = formatPayDate(paymentMonthDate);
+  const taxPeriod = getUkTaxPeriod(paymentMonthDate);
 
   // Separate substantive shifts, bank shifts, and annual leave
   const substantiveShifts =
@@ -555,6 +592,15 @@ export const calculateMonthlyPayslip = (
       const bd = s.breakdown || calculateShiftBreakdown(s);
       return acc + bd.totalWorkedHours;
     }, 0)
+  );
+  const substantiveAccountedHours = roundHours(
+    shifts
+      .filter((shift) => shift.shiftType !== 'BANK' && shift.shiftType !== 'OVERTIME')
+      .reduce(
+        (total, shift) =>
+          total + (shift.breakdown || calculateShiftBreakdown(shift)).totalWorkedHours,
+        0
+      )
   );
 
   // 1. Substantive Additional Hours & Overtime calculation (AfC Section 3)
@@ -577,20 +623,15 @@ export const calculateMonthlyPayslip = (
       substantiveEnhancements.actingUpAmount
   );
 
-  const totalSubstantiveWorkedHours = roundHours(
-    substantiveShifts.reduce((acc, s) => {
-      const bd = s.breakdown || calculateShiftBreakdown(s);
-      return acc + bd.totalWorkedHours;
-    }, 0)
-  );
-
   // 3. AfC Absence holiday enhancement pay (AfC Section 13)
   const afcAbsencePay =
     profile.contractType === 'SUBSTANTIVE'
       ? calculateAfcAbsencePay(
           annualLeaveHours,
-          substantiveEnhancementsSum,
-          totalSubstantiveWorkedHours
+          profile,
+          context.allShifts ?? shifts,
+          monthYear,
+          baseRates.hourlyRate
         )
       : 0;
 
@@ -613,17 +654,30 @@ export const calculateMonthlyPayslip = (
   );
 
   const grossPay = roundCurrency(payLineItems.reduce((acc, item) => acc + item.amount, 0));
+  const pensionablePay = roundCurrency(grossPay - overtimeResult.overtimePay);
 
   // Deductions calculation
-  const deductions = calculateDeductions(grossPay, profile, commitments);
-
-  // Worked roster month vs. Payment month (month + 1)
-  const paymentMonthDate = getPaymentMonthDate(monthYear);
-  const rosterMonthString = formatMonthYearString(monthYear);
-  const monthYearString = formatMonthYearString(paymentMonthDate);
-  const periodEndDate = formatPeriodEndDate(paymentMonthDate);
-  const payDate = formatPayDate(paymentMonthDate);
-  const taxPeriod = getUkTaxPeriod(paymentMonthDate);
+  const deductions = calculateDeductions(
+    grossPay,
+    pensionablePay,
+    profile,
+    commitments,
+    taxPeriod,
+    previousYearToDate
+  );
+  const paye = deductions.deductionsList.find((item) => item.name === 'PAYE')?.amount ?? 0;
+  const ni = deductions.deductionsList.find((item) => item.name.startsWith('NI '))?.amount ?? 0;
+  const pension =
+    deductions.deductionsList.find((item) => item.name.startsWith('NHS Pension'))?.amount ?? 0;
+  const yearToDate: PayslipYearToDate = {
+    grossPay: roundCurrency(previousYearToDate.grossPay + grossPay),
+    taxablePay: roundCurrency(previousYearToDate.taxablePay + deductions.taxablePay),
+    taxPaid: roundCurrency(previousYearToDate.taxPaid + paye),
+    niPay: roundCurrency(previousYearToDate.niPay + grossPay),
+    niContributions: roundCurrency(previousYearToDate.niContributions + ni),
+    pensionablePay: roundCurrency(previousYearToDate.pensionablePay + pensionablePay),
+    pensionContributions: roundCurrency(previousYearToDate.pensionContributions + pension),
+  };
 
   return {
     monthYearString,
@@ -639,9 +693,12 @@ export const calculateMonthlyPayslip = (
     payLineItems,
     enhancementsTotal: totalEnhancements,
     grossPay,
-    pensionablePay: grossPay,
+    pensionablePay,
     taxablePay: deductions.taxablePay,
     annualLeaveHours,
+    substantiveAccountedHours,
+    bankHours: bankResults.totalHours,
+    yearToDate,
     ...(afcAbsencePay > 0 && { afcAbsencePay }),
     ...(profile.contractType === 'SUBSTANTIVE' &&
       overtimeResult.additionalHours > 0 && {
@@ -657,4 +714,37 @@ export const calculateMonthlyPayslip = (
     totalDeductions: deductions.totalDeductions,
     netPay: roundCurrency(grossPay - deductions.totalDeductions),
   };
+};
+
+export const calculatePayslipHistory = (
+  profile: EmployeeProfile,
+  allShifts: Shift[],
+  commitments: RecurringCommitment[],
+  activeRosterMonth: Date
+): PayslipSummary => {
+  const paymentMonth = getPaymentMonthDate(activeRosterMonth);
+  const taxYearStartYear =
+    paymentMonth.getMonth() >= 3 ? paymentMonth.getFullYear() : paymentMonth.getFullYear() - 1;
+  const firstRosterMonth = new Date(taxYearStartYear, 2, 1);
+  let yearToDate = EMPTY_YEAR_TO_DATE;
+  let currentSummary: PayslipSummary | null = null;
+
+  for (
+    let rosterMonth = new Date(firstRosterMonth);
+    rosterMonth <= activeRosterMonth;
+    rosterMonth = new Date(rosterMonth.getFullYear(), rosterMonth.getMonth() + 1, 1)
+  ) {
+    const monthPrefix = `${rosterMonth.getFullYear()}-${String(rosterMonth.getMonth() + 1).padStart(2, '0')}`;
+    const monthShifts = allShifts.filter((shift) => shift.date.startsWith(monthPrefix));
+    currentSummary = calculateMonthlyPayslip(profile, monthShifts, commitments, rosterMonth, {
+      allShifts,
+      previousYearToDate: yearToDate,
+    });
+    yearToDate = currentSummary.yearToDate;
+  }
+
+  return (
+    currentSummary ??
+    calculateMonthlyPayslip(profile, [], commitments, activeRosterMonth, { allShifts })
+  );
 };

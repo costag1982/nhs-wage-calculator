@@ -15,6 +15,13 @@ interface MinuteSlice {
   isPlainDay: boolean; // Weekday between 06:00 and 20:00
 }
 
+const getMinuteOffset = (time: string, startTotalMinutes: number): number => {
+  const [hour, minute] = time.split(':').map(Number);
+  let offset = hour * MINUTES_PER_HOUR + minute;
+  if (offset < startTotalMinutes) offset += MINUTES_PER_DAY;
+  return offset;
+};
+
 const classifyMinute = (startDate: Date, minuteOffsetFromStartOfDay: number): MinuteSlice => {
   const dayOffset = Math.floor(minuteOffsetFromStartOfDay / MINUTES_PER_DAY);
   const minuteInDay = minuteOffsetFromStartOfDay % MINUTES_PER_DAY;
@@ -94,7 +101,8 @@ export const calculateShiftBreakdown = (shift: Shift): ShiftHoursBreakdown => {
   }
 
   const totalRawMinutes = endTotalMinutes - startTotalMinutes;
-  const paidMinutes = Math.max(0, totalRawMinutes - unpaidBreakMinutes);
+  const boundedBreakMinutes = Math.min(Math.max(0, unpaidBreakMinutes), totalRawMinutes);
+  const paidMinutes = totalRawMinutes - boundedBreakMinutes;
 
   // Annual Leave shifts do not accrue calendar unsocial enhancements (Nights, Weekends, Bank Holidays)
   if (shift.shiftType === 'ANNUAL_LEAVE') {
@@ -109,7 +117,16 @@ export const calculateShiftBreakdown = (shift: Shift): ShiftHoursBreakdown => {
     };
   }
 
-  const breakRatio = totalRawMinutes > 0 ? paidMinutes / totalRawMinutes : 0;
+  const defaultBreakStart =
+    startTotalMinutes + Math.floor((totalRawMinutes - boundedBreakMinutes) / 2);
+  const requestedBreakStart = shift.unpaidBreakStartTime
+    ? getMinuteOffset(shift.unpaidBreakStartTime, startTotalMinutes)
+    : defaultBreakStart;
+  const breakStart = Math.min(
+    Math.max(startTotalMinutes, requestedBreakStart),
+    endTotalMinutes - boundedBreakMinutes
+  );
+  const breakEnd = breakStart + boundedBreakMinutes;
 
   let bankHolidayMinutes = 0;
   let sundayMinutes = 0;
@@ -121,6 +138,7 @@ export const calculateShiftBreakdown = (shift: Shift): ShiftHoursBreakdown => {
   const startDate = new Date(Date.UTC(year, month - 1, day, 0, 0, 0));
 
   for (let currentMinute = startTotalMinutes; currentMinute < endTotalMinutes; currentMinute++) {
+    if (currentMinute >= breakStart && currentMinute < breakEnd) continue;
     const slice = classifyMinute(startDate, currentMinute);
 
     if (slice.isBankHoliday) {
@@ -136,13 +154,18 @@ export const calculateShiftBreakdown = (shift: Shift): ShiftHoursBreakdown => {
     }
   }
 
-  // Apply break ratio evenly across slices to maintain proportionality
+  const isWeekdayOnly = bankHolidayMinutes === 0 && saturdayMinutes === 0 && sundayMinutes === 0;
+  if (isWeekdayOnly && nightMinutes > paidMinutes / 2) {
+    nightMinutes = paidMinutes;
+    plainDayMinutes = 0;
+  }
+
   return {
     totalWorkedHours: roundHours(paidMinutes / MINUTES_PER_HOUR),
-    plainDayHours: (plainDayMinutes * breakRatio) / MINUTES_PER_HOUR,
-    nightHours: (nightMinutes * breakRatio) / MINUTES_PER_HOUR,
-    saturdayHours: (saturdayMinutes * breakRatio) / MINUTES_PER_HOUR,
-    sundayHours: (sundayMinutes * breakRatio) / MINUTES_PER_HOUR,
-    bankHolidayHours: (bankHolidayMinutes * breakRatio) / MINUTES_PER_HOUR,
+    plainDayHours: plainDayMinutes / MINUTES_PER_HOUR,
+    nightHours: nightMinutes / MINUTES_PER_HOUR,
+    saturdayHours: saturdayMinutes / MINUTES_PER_HOUR,
+    sundayHours: sundayMinutes / MINUTES_PER_HOUR,
+    bankHolidayHours: bankHolidayMinutes / MINUTES_PER_HOUR,
   };
 };

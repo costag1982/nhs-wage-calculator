@@ -25,12 +25,12 @@ describe('ShiftIntervalCalculator', () => {
     expect(breakdown.bankHolidayHours).toBe(0);
   });
 
-  it('correctly splits weekday overnight shift crossing midnight into plain and night hours', () => {
+  it('applies the whole-shift night enhancement when more than half is in the night window', () => {
     // Wednesday 19:00 to Thursday 07:30 (12.5 hrs gross, 30m break = 12h paid)
     // 19:00 - 20:00 (1h plain)
     // 20:00 - 06:00 (10h night)
     // 06:00 - 07:30 (1.5h plain)
-    // Gross: 2.5h plain, 10h night. Net with 30m break: 2.4h plain, 9.6h night
+    // More than half is between 20:00 and 06:00, so AfC 2.13 covers the whole paid shift.
     const shift: Shift = {
       id: '2',
       date: '2026-07-01', // Wednesday
@@ -42,10 +42,25 @@ describe('ShiftIntervalCalculator', () => {
     const breakdown = calculateShiftBreakdown(shift);
 
     expect(breakdown.totalWorkedHours).toBe(12);
-    expect(breakdown.nightHours).toBe(9.6);
-    expect(breakdown.plainDayHours).toBe(2.4);
+    expect(breakdown.nightHours).toBe(12);
+    expect(breakdown.plainDayHours).toBe(0);
     expect(breakdown.saturdayHours).toBe(0);
     expect(breakdown.sundayHours).toBe(0);
+  });
+
+  it('places an explicit break in the correct pay category at a Friday/Saturday boundary', () => {
+    const breakdown = calculateShiftBreakdown({
+      id: 'boundary-break',
+      date: '2026-07-17',
+      startTime: '22:00',
+      endTime: '06:00',
+      unpaidBreakMinutes: 30,
+      unpaidBreakStartTime: '02:00',
+    });
+
+    expect(breakdown.totalWorkedHours).toBe(7.5);
+    expect(breakdown.nightHours).toBe(2);
+    expect(breakdown.saturdayHours).toBe(5.5);
   });
 
   it('correctly identifies Saturday hours for weekend shifts', () => {

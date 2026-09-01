@@ -39,9 +39,12 @@ export interface Shift {
   startTime: string; // "HH:mm" (e.g. "07:00" or "19:00")
   endTime: string; // "HH:mm" (e.g. "19:30" or "07:30")
   unpaidBreakMinutes: number;
+  unpaidBreakStartTime?: string; // Optional "HH:mm" location of the unpaid break
   presetType?: ShiftPresetType;
   shiftType?: ShiftWorkType; // 'SUBSTANTIVE' (default), 'OVERTIME', 'BANK', or 'ANNUAL_LEAVE'
   overrideBand?: NhsBandLevel;
   customHourlyRate?: number;
+  customEnhancementHourlyRate?: number; // Local bank enhancement rate, where supplied
+  holidayPayHourlyRate?: number; // Local bank rolled-up holiday pay rate, where supplied
   breakdown?: ShiftHoursBreakdown;
 }

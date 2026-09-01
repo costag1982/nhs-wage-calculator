@@ -64,8 +64,8 @@ const saveProfileSync = (db: Database, profile: EmployeeProfile): void => {
       full_time_salary_fte, standard_full_time_hours, contracted_weekly_hours,
       custom_hourly_rate, tax_code, ni_category, pension_contribution_rate,
       tax_office_name, tax_office_ref, ni_number, employee_number, pay_method,
-      years_of_service_tier, al_carry_over_hours
-    ) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      years_of_service_tier, al_carry_over_hours, afc_absence_hourly_rate
+    ) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       profile.employeeName,
       profile.jobTitle,
@@ -87,6 +87,7 @@ const saveProfileSync = (db: Database, profile: EmployeeProfile): void => {
       profile.payMethod,
       profile.yearsOfServiceTier || 'UNDER_5',
       profile.annualLeaveCarryOverHours || 0,
+      profile.afcAbsenceHourlyRateOverride ?? null,
     ]
   );
 };
@@ -109,7 +110,10 @@ const initializeSchema = (db: Database): void => {
       preset_type TEXT,
       override_band TEXT,
       custom_hourly_rate REAL,
-      shift_type TEXT
+      shift_type TEXT,
+      unpaid_break_start_time TEXT,
+      custom_enhancement_hourly_rate REAL,
+      holiday_pay_hourly_rate REAL
     );
 
     CREATE TABLE IF NOT EXISTS employee_profile (
@@ -159,12 +163,32 @@ const initializeSchema = (db: Database): void => {
     // Column already exists
   }
   try {
+    db.run('ALTER TABLE shifts ADD COLUMN unpaid_break_start_time TEXT');
+  } catch {
+    // Column already exists
+  }
+  try {
+    db.run('ALTER TABLE shifts ADD COLUMN custom_enhancement_hourly_rate REAL');
+  } catch {
+    // Column already exists
+  }
+  try {
+    db.run('ALTER TABLE shifts ADD COLUMN holiday_pay_hourly_rate REAL');
+  } catch {
+    // Column already exists
+  }
+  try {
     db.run("ALTER TABLE employee_profile ADD COLUMN years_of_service_tier TEXT DEFAULT 'UNDER_5'");
   } catch {
     // Column already exists
   }
   try {
     db.run('ALTER TABLE employee_profile ADD COLUMN al_carry_over_hours REAL DEFAULT 0');
+  } catch {
+    // Column already exists
+  }
+  try {
+    db.run('ALTER TABLE employee_profile ADD COLUMN afc_absence_hourly_rate REAL');
   } catch {
     // Column already exists
   }
@@ -191,7 +215,7 @@ const initializeSchema = (db: Database): void => {
   if (!shiftCount) {
     for (const shift of DEFAULT_GEMMA_JUNE_SHIFTS) {
       db.run(
-        'INSERT INTO shifts (id, date, start_time, end_time, unpaid_break_minutes, preset_type, override_band, custom_hourly_rate, shift_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO shifts (id, date, start_time, end_time, unpaid_break_minutes, preset_type, override_band, custom_hourly_rate, shift_type, unpaid_break_start_time, custom_enhancement_hourly_rate, holiday_pay_hourly_rate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         [
           shift.id,
           shift.date,
@@ -202,6 +226,9 @@ const initializeSchema = (db: Database): void => {
           shift.overrideBand || null,
           shift.customHourlyRate ?? null,
           shift.shiftType || 'SUBSTANTIVE',
+          shift.unpaidBreakStartTime ?? null,
+          shift.customEnhancementHourlyRate ?? null,
+          shift.holidayPayHourlyRate ?? null,
         ]
       );
     }
@@ -244,7 +271,7 @@ export const getDb = async (): Promise<Database> => {
 export const getAllShifts = async (): Promise<Shift[]> => {
   const db = await getDb();
   const res = db.exec(
-    'SELECT id, date, start_time, end_time, unpaid_break_minutes, preset_type, override_band, custom_hourly_rate, shift_type FROM shifts ORDER BY date ASC'
+    'SELECT id, date, start_time, end_time, unpaid_break_minutes, preset_type, override_band, custom_hourly_rate, shift_type, unpaid_break_start_time, custom_enhancement_hourly_rate, holiday_pay_hourly_rate FROM shifts ORDER BY date ASC'
   );
   if (!res || res.length === 0) return [];
 
@@ -270,6 +297,15 @@ export const getAllShifts = async (): Promise<Shift[]> => {
       customHourlyRate: rowObj.custom_hourly_rate
         ? (rowObj.custom_hourly_rate as number)
         : undefined,
+      unpaidBreakStartTime: rowObj.unpaid_break_start_time
+        ? (rowObj.unpaid_break_start_time as string)
+        : undefined,
+      customEnhancementHourlyRate: rowObj.custom_enhancement_hourly_rate
+        ? (rowObj.custom_enhancement_hourly_rate as number)
+        : undefined,
+      holidayPayHourlyRate: rowObj.holiday_pay_hourly_rate
+        ? (rowObj.holiday_pay_hourly_rate as number)
+        : undefined,
     };
   });
 };
@@ -277,7 +313,7 @@ export const getAllShifts = async (): Promise<Shift[]> => {
 export const saveShift = async (shift: Shift): Promise<void> => {
   const db = await getDb();
   db.run(
-    'INSERT OR REPLACE INTO shifts (id, date, start_time, end_time, unpaid_break_minutes, preset_type, override_band, custom_hourly_rate, shift_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    'INSERT OR REPLACE INTO shifts (id, date, start_time, end_time, unpaid_break_minutes, preset_type, override_band, custom_hourly_rate, shift_type, unpaid_break_start_time, custom_enhancement_hourly_rate, holiday_pay_hourly_rate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     [
       shift.id,
       shift.date,
@@ -288,6 +324,9 @@ export const saveShift = async (shift: Shift): Promise<void> => {
       shift.overrideBand || null,
       shift.customHourlyRate ?? null,
       shift.shiftType || 'SUBSTANTIVE',
+      shift.unpaidBreakStartTime ?? null,
+      shift.customEnhancementHourlyRate ?? null,
+      shift.holidayPayHourlyRate ?? null,
     ]
   );
   await persistToIndexedDb(db);
@@ -310,7 +349,7 @@ export const replaceAllShifts = async (shifts: Shift[]): Promise<void> => {
   db.run('DELETE FROM shifts');
   for (const shift of shifts) {
     db.run(
-      'INSERT INTO shifts (id, date, start_time, end_time, unpaid_break_minutes, preset_type, override_band, custom_hourly_rate, shift_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO shifts (id, date, start_time, end_time, unpaid_break_minutes, preset_type, override_band, custom_hourly_rate, shift_type, unpaid_break_start_time, custom_enhancement_hourly_rate, holiday_pay_hourly_rate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [
         shift.id,
         shift.date,
@@ -321,6 +360,9 @@ export const replaceAllShifts = async (shifts: Shift[]): Promise<void> => {
         shift.overrideBand || null,
         shift.customHourlyRate ?? null,
         shift.shiftType || 'SUBSTANTIVE',
+        shift.unpaidBreakStartTime ?? null,
+        shift.customEnhancementHourlyRate ?? null,
+        shift.holidayPayHourlyRate ?? null,
       ]
     );
   }
@@ -333,7 +375,7 @@ export const replaceAllShifts = async (shifts: Shift[]): Promise<void> => {
 export const getProfile = async (): Promise<EmployeeProfile> => {
   const db = await getDb();
   const res = db.exec(
-    'SELECT employee_name, job_title, department, location, band, contract_type, full_time_salary_fte, standard_full_time_hours, contracted_weekly_hours, custom_hourly_rate, tax_code, ni_category, pension_contribution_rate, tax_office_name, tax_office_ref, ni_number, employee_number, pay_method, years_of_service_tier, al_carry_over_hours FROM employee_profile WHERE id = 1'
+    'SELECT employee_name, job_title, department, location, band, contract_type, full_time_salary_fte, standard_full_time_hours, contracted_weekly_hours, custom_hourly_rate, tax_code, ni_category, pension_contribution_rate, tax_office_name, tax_office_ref, ni_number, employee_number, pay_method, years_of_service_tier, al_carry_over_hours, afc_absence_hourly_rate FROM employee_profile WHERE id = 1'
   );
   if (!res || res.length === 0 || res[0].values.length === 0) {
     return DEFAULT_GEMMA_PROFILE;
@@ -361,6 +403,7 @@ export const getProfile = async (): Promise<EmployeeProfile> => {
     payMethod: row[17] as string,
     yearsOfServiceTier: (row[18] as EmployeeProfile['yearsOfServiceTier']) || 'UNDER_5',
     annualLeaveCarryOverHours: (row[19] as number) || 0,
+    afcAbsenceHourlyRateOverride: row[20] ? (row[20] as number) : undefined,
   };
 };
 
@@ -455,7 +498,7 @@ export const importFullDataPayload = async (payload: {
     db.run('DELETE FROM shifts');
     for (const shift of payload.shifts) {
       db.run(
-        'INSERT INTO shifts (id, date, start_time, end_time, unpaid_break_minutes, preset_type, override_band, custom_hourly_rate, shift_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO shifts (id, date, start_time, end_time, unpaid_break_minutes, preset_type, override_band, custom_hourly_rate, shift_type, unpaid_break_start_time, custom_enhancement_hourly_rate, holiday_pay_hourly_rate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         [
           shift.id,
           shift.date,
@@ -466,6 +509,9 @@ export const importFullDataPayload = async (payload: {
           shift.overrideBand || null,
           shift.customHourlyRate ?? null,
           shift.shiftType || 'SUBSTANTIVE',
+          shift.unpaidBreakStartTime ?? null,
+          shift.customEnhancementHourlyRate ?? null,
+          shift.holidayPayHourlyRate ?? null,
         ]
       );
     }

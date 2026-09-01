@@ -59,14 +59,40 @@ export const TaxPensionSection: React.FC<TaxPensionSectionProps> = ({
               onUpdateProfile({ pensionContributionRate: parseFloat(e.target.value) })
             }
           >
-            <option value={0.052}>Tier 1 - 5.2% (Up to £13,245)</option>
-            <option value={0.065}>Tier 2 / Band 2 - 6.5% (£13,246 - £25,147)</option>
-            <option value={0.083}>Tier 5 - 8.3% (£25,148 - £31,349)</option>
-            <option value={0.098}>Tier 6 - 9.8% (£31,350 - £49,245)</option>
-            <option value={0.107}>Tier 7 - 10.7% (£49,246 - £62,925)</option>
-            <option value={0.125}>Tier 8 - 12.5% (£62,926+)</option>
+            <option value={0.052}>Tier 1 - 5.2% (Up to £13,259)</option>
+            <option value={0.065}>Tier 2 - 6.5% (£13,260 - £28,854)</option>
+            <option value={0.083}>Tier 3 - 8.3% (£28,855 - £35,155)</option>
+            <option value={0.098}>Tier 4 - 9.8% (£35,156 - £52,778)</option>
+            <option value={0.107}>Tier 5 - 10.7% (£52,779 - £67,668)</option>
+            <option value={0.125}>Tier 6 - 12.5% (£67,669+)</option>
             <option value={0.0}>0.0% (Opted Out)</option>
           </select>
+        </div>
+
+        <div className="form-group">
+          <label className="form-label" htmlFor="settings-afc-absence-rate">
+            AfC Absence Historical Average (£/leave hour, optional)
+          </label>
+          <input
+            id="settings-afc-absence-rate"
+            type="number"
+            step="0.0001"
+            min="0"
+            className="form-input"
+            value={profile.afcAbsenceHourlyRateOverride ?? ''}
+            placeholder="Calculated from the previous 3 months when blank"
+            onChange={(event) =>
+              onUpdateProfile({
+                afcAbsenceHourlyRateOverride: event.target.value
+                  ? Number(event.target.value)
+                  : undefined,
+              })
+            }
+          />
+          <span className="form-help">
+            Use payroll's historical average where known. Otherwise the forecast uses the previous
+            three roster months stored in this calculator.
+          </span>
         </div>
       </div>
     </div>

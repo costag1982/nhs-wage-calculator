@@ -11,7 +11,7 @@ export const MetricCards: React.FC<MetricCardsProps> = ({ summary }) => {
   const formatCurrency = (val: number) =>
     `£${val.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-  const workedHours = summary.hoursBreakdown.totalWorkedHours;
+  const workedHours = summary.substantiveAccountedHours;
   const contractedHours = summary.monthlyBasicHours;
   const hoursProgress =
     contractedHours > 0 ? Math.min((workedHours / contractedHours) * 100, 100) : 0;
@@ -97,7 +97,7 @@ export const MetricCards: React.FC<MetricCardsProps> = ({ summary }) => {
       {/* Hours Worked vs Contracted */}
       <div className="metric-card">
         <div className="metric-header">
-          <span className="metric-title">Hours Worked</span>
+          <span className="metric-title">Substantive Roster Hours</span>
           <div className="metric-icon">
             <Timer size={20} color={isOverContracted ? 'var(--amber)' : 'var(--nhs-blue)'} />
           </div>
@@ -121,8 +121,13 @@ export const MetricCards: React.FC<MetricCardsProps> = ({ summary }) => {
         </div>
         <div className="metric-subtitle">
           {isOverContracted
-            ? `${formatHours(workedHours - contractedHours)}h above monthly contracted equivalent`
-            : `${formatHours(contractedHours - workedHours)}h remaining this month`}
+            ? `${formatHours(workedHours - contractedHours)}h above the monthly equivalent — reconcile over the full rota period and check TOIL before treating this as payable`
+            : `${formatHours(contractedHours - workedHours)}h below the monthly contracted equivalent`}
+          {summary.bankHours > 0 && (
+            <span style={{ display: 'block', marginTop: '2px', fontWeight: 600 }}>
+              Bank work tracked separately: {formatHours(summary.bankHours)}h
+            </span>
+          )}
           {summary.annualLeaveHours !== undefined && summary.annualLeaveHours > 0 && (
             <span
               style={{

@@ -1,78 +1,61 @@
-import { UK_MONTHLY_PERSONAL_ALLOWANCE, UK_MONTHLY_TAX_BANDS } from '../constants/taxConfig';
 import { roundCurrency } from '../utils/mathUtils';
 
+const BASIC_RATE_BAND = 37_700;
+const HIGHER_RATE_BAND = 74_870;
+
+export interface PayeCalculationInput {
+  taxablePay: number;
+  taxCode: string;
+  taxPeriod?: number;
+  previousTaxablePay?: number;
+  previousTaxPaid?: number;
+}
+
 const calculateFlatRateTax = (taxablePay: number, code: string): number | null => {
-  if (code.startsWith('BR')) {
-    return roundCurrency(taxablePay * 0.2); // Basic rate 20%
-  }
-  if (code.startsWith('D0')) {
-    return roundCurrency(taxablePay * 0.4); // Higher rate 40%
-  }
-  if (code.startsWith('D1')) {
-    return roundCurrency(taxablePay * 0.45); // Additional rate 45%
-  }
-  if (code.startsWith('NT')) {
-    return 0; // No tax
-  }
+  if (code.startsWith('BR')) return roundCurrency(taxablePay * 0.2);
+  if (code.startsWith('D0')) return roundCurrency(taxablePay * 0.4);
+  if (code.startsWith('D1')) return roundCurrency(taxablePay * 0.45);
+  if (code.startsWith('NT')) return 0;
   return null;
 };
 
-const getMonthlyAllowance = (code: string): number => {
-  if (code.startsWith('0T')) {
-    return 0;
-  }
-
+const getAnnualAllowance = (code: string): number => {
+  if (code.startsWith('0T')) return 0;
   const match = code.match(/^(\d+)[A-Z]/);
-  if (match && match[1]) {
-    const annualAllowance = parseInt(match[1], 10) * 10 + 9;
-    return annualAllowance / 12;
-  }
-
-  return UK_MONTHLY_PERSONAL_ALLOWANCE;
+  return match?.[1] ? Number.parseInt(match[1], 10) * 10 + 9 : 12_579;
 };
 
-const calculateGraduatedTax = (taxableAmount: number): number => {
-  let remainingTaxable = taxableAmount;
-  let totalTax = 0;
-  let previousThreshold = 0;
-
-  for (const band of UK_MONTHLY_TAX_BANDS) {
-    const bandWidth = band.monthlyThreshold - previousThreshold;
-    const taxableInBand = Math.min(remainingTaxable, bandWidth);
-
-    if (taxableInBand > 0) {
-      totalTax += taxableInBand * band.rate;
-      remainingTaxable -= taxableInBand;
-    }
-
-    if (remainingTaxable <= 0) break;
-    previousThreshold = band.monthlyThreshold;
-  }
-
-  return roundCurrency(totalTax);
+const calculateTaxOnTaxableIncome = (taxableIncome: number, periodFraction: number): number => {
+  const basicBand = BASIC_RATE_BAND * periodFraction;
+  const higherBand = HIGHER_RATE_BAND * periodFraction;
+  const basicTax = Math.min(taxableIncome, basicBand) * 0.2;
+  const higherTax = Math.min(Math.max(0, taxableIncome - basicBand), higherBand) * 0.4;
+  const additionalTax = Math.max(0, taxableIncome - basicBand - higherBand) * 0.45;
+  return roundCurrency(basicTax + higherTax + additionalTax);
 };
 
-export const calculateMonthlyPaye = (taxablePay: number, taxCode: string): number => {
+export const calculatePaye = ({
+  taxablePay,
+  taxCode,
+  taxPeriod = 1,
+  previousTaxablePay = 0,
+  previousTaxPaid = 0,
+}: PayeCalculationInput): number => {
   const cleanCode = taxCode.trim().toUpperCase();
-
-  // 1. Check flat rate / special codes
   const flatRateTax = calculateFlatRateTax(taxablePay, cleanCode);
-  if (flatRateTax !== null) {
-    return flatRateTax;
-  }
+  if (flatRateTax !== null) return flatRateTax;
 
-  // 2. Compute personal allowance & taxable amount
-  const monthlyAllowance = getMonthlyAllowance(cleanCode);
+  const isNonCumulative = /(?:W1|M1|X|NONCUM)/.test(cleanCode);
+  const effectivePeriod = isNonCumulative ? 1 : Math.min(12, Math.max(1, taxPeriod));
+  const grossTaxableToDate = isNonCumulative ? taxablePay : previousTaxablePay + taxablePay;
+  const allowanceToDate = (getAnnualAllowance(cleanCode) * effectivePeriod) / 12;
+  const taxableIncome = Math.max(0, Math.floor(grossTaxableToDate - allowanceToDate));
+  const taxDueToDate = calculateTaxOnTaxableIncome(taxableIncome, effectivePeriod / 12);
 
-  // Per HMRC PAYE Tax Tables (Table A/B monthly):
-  // The taxable pay and allowance are processed in whole pounds (truncated)
-  const wholeTaxablePay = Math.floor(taxablePay);
-  const wholeAllowance = Math.floor(monthlyAllowance);
-  const taxableAmount = Math.max(0, wholeTaxablePay - wholeAllowance);
-  if (taxableAmount <= 0) {
-    return 0;
-  }
-
-  // 3. Apply UK progressive tax bands
-  return calculateGraduatedTax(taxableAmount);
+  return isNonCumulative
+    ? taxDueToDate
+    : Math.max(0, roundCurrency(taxDueToDate - previousTaxPaid));
 };
+
+export const calculateMonthlyPaye = (taxablePay: number, taxCode: string): number =>
+  calculatePaye({ taxablePay, taxCode });

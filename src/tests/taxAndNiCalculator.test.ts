@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calculateMonthlyPaye } from '../domain/services/taxCalculator';
+import { calculateMonthlyPaye, calculatePaye } from '../domain/services/taxCalculator';
 import { calculateClass1CategoryA } from '../domain/services/nationalInsuranceCalculator';
 import { calculatePensionContribution } from '../domain/services/pensionCalculator';
 
@@ -28,5 +28,31 @@ describe('Tax, NI and Pension Calculators', () => {
     const taxablePay = 1000.0;
     const tax = calculateMonthlyPaye(taxablePay, 'BR');
     expect(tax).toBe(200.0);
+  });
+
+  it.each([
+    {
+      taxPeriod: 3,
+      taxablePay: 1861.5,
+      previousTaxablePay: 3390.68,
+      previousTaxPaid: 258.8,
+      expected: 162.6,
+    },
+    {
+      taxPeriod: 4,
+      taxablePay: 1828.72,
+      previousTaxablePay: 5252.18,
+      previousTaxPaid: 421.4,
+      expected: 156,
+    },
+    {
+      taxPeriod: 5,
+      taxablePay: 2129.13,
+      previousTaxablePay: 7080.9,
+      previousTaxPaid: 577.4,
+      expected: 216.2,
+    },
+  ])("matches Gemma's cumulative PAYE at tax month $taxPeriod", (fixture) => {
+    expect(calculatePaye({ ...fixture, taxCode: '1257L CUMUL' })).toBe(fixture.expected);
   });
 });

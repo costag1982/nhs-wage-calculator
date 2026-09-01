@@ -391,17 +391,17 @@ describe('Overtime, Additional Hours & Contract Types (AfC Section 3)', () => {
     const basicPayItem = result.payLineItems.find((p) => p.description === 'Basic Pay');
     expect(basicPayItem).toBeUndefined();
 
-    // Basic Hourly Pay: 20h * £12.9245 = £258.49
+    // Basic Hourly Pay is rounded per shift and then aggregated.
     const hourlyPayItem = result.payLineItems.find((p) => p.description === 'Basic Hourly Pay');
     expect(hourlyPayItem).toBeDefined();
-    expect(hourlyPayItem?.amount).toBe(258.49);
+    expect(hourlyPayItem?.amount).toBe(258.5);
 
     // Night Duty EN: 20h * 0.41 = 8.2h @ £12.9245 = £105.98
     const nightItem = result.payLineItems.find((p) => p.description === 'Night Duty EN');
     expect(nightItem).toBeDefined();
     expect(nightItem?.amount).toBe(105.98);
 
-    expect(result.grossPay).toBe(364.47);
+    expect(result.grossPay).toBe(364.48);
   });
 
   it('correctly processes July dataset: excludes bank shifts from 26h additional hours (14.5h) and substantive Sunday EN (14.0h)', () => {
@@ -575,7 +575,7 @@ describe('Overtime, Additional Hours & Contract Types (AfC Section 3)', () => {
     expect(substantiveSundayItem).toBeDefined();
     expect(substantiveSundayItem?.unitsWorked).toBe(14.5);
     expect(substantiveSundayItem?.paidUnits).toBe(12.04); // 14.5h * 0.83 = 12.035 -> 12.04h
-    expect(substantiveSundayItem?.amount).toBe(155.61); // 12.04 * 12.9245 = 155.61
+    expect(substantiveSundayItem?.amount).toBe(155.54); // Raw hours drive pay; paid units are display-rounded.
 
     // 3. No Acting Up Allowance (Band 3 was worked as a Bank shift, not substantive acting up)
     const actingUpItem = result.payLineItems.find(
@@ -601,7 +601,7 @@ describe('Overtime, Additional Hours & Contract Types (AfC Section 3)', () => {
     const bankSundayItem = result.payLineItems.find((p) => p.description === 'Bank Sunday EN');
     expect(bankSundayItem).toBeDefined();
     expect(bankSundayItem?.unitsWorked).toBe(5.5);
-    expect(bankSundayItem?.paidUnits).toBe(4.56); // roundHours(5.5 * 0.83) = 4.56
-    expect(bankSundayItem?.amount).toBe(64.07); // 4.56 * 14.05 = 64.07
+    expect(bankSundayItem?.paidUnits).toBe(3.8); // Band 3 Sunday enhancement is 69%.
+    expect(bankSundayItem?.amount).toBe(53.32);
   });
 });

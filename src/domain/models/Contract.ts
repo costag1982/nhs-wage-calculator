@@ -32,6 +32,7 @@ export interface EmployeeProfile {
   taxCode: string; // e.g. "1257L CUMUL", "BR"
   niCategory: string; // e.g. "A"
   pensionContributionRate: number; // e.g. 0.065 (6.5%)
+  afcAbsenceHourlyRateOverride?: number; // Payroll-provided historical average, where known
   taxOfficeName: string;
   taxOfficeRef: string;
   niNumber: string;

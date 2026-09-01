@@ -9,6 +9,16 @@ export interface PayLineItem {
   amount: number;
 }
 
+export interface PayslipYearToDate {
+  grossPay: number;
+  taxablePay: number;
+  taxPaid: number;
+  niPay: number;
+  niContributions: number;
+  pensionablePay: number;
+  pensionContributions: number;
+}
+
 export interface PayslipSummary {
   // Period details
   monthYearString: string; // e.g. "July 2026" (Payment Month)
@@ -34,6 +44,9 @@ export interface PayslipSummary {
   taxablePay: number;
   annualLeaveHours?: number; // Total annual leave hours recorded in this roster month
   afcAbsencePay?: number; // AfC Section 13 leave enhancement pay (AfC Absence)
+  substantiveAccountedHours: number;
+  bankHours: number;
+  yearToDate: PayslipYearToDate;
 
   // Additional Hours & Overtime (substantive contracts only)
 

@@ -70,9 +70,20 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
   const [unpaidBreakMinutes, setUnpaidBreakMinutes] = useState<number>(
     initialShift?.unpaidBreakMinutes ?? (shiftType === 'ANNUAL_LEAVE' ? 0 : 30)
   );
+  const [unpaidBreakStartTime, setUnpaidBreakStartTime] = useState<string>(
+    initialShift?.unpaidBreakStartTime || ''
+  );
   const [overrideBand, setOverrideBand] = useState<string>(initialShift?.overrideBand || '');
   const [customRate, setCustomRate] = useState<string>(
     initialShift?.customHourlyRate ? String(initialShift.customHourlyRate) : ''
+  );
+  const [customEnhancementRate, setCustomEnhancementRate] = useState<string>(
+    initialShift?.customEnhancementHourlyRate
+      ? String(initialShift.customEnhancementHourlyRate)
+      : ''
+  );
+  const [holidayPayRate, setHolidayPayRate] = useState<string>(
+    initialShift?.holidayPayHourlyRate ? String(initialShift.holidayPayHourlyRate) : ''
   );
 
   const conflictingShift = useMemo(() => {
@@ -119,20 +130,21 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
       startTime,
       endTime,
       unpaidBreakMinutes,
+      unpaidBreakStartTime: unpaidBreakStartTime || undefined,
       shiftType,
     });
-  }, [selectedDate, startTime, endTime, unpaidBreakMinutes, shiftType]);
+  }, [selectedDate, startTime, endTime, unpaidBreakMinutes, unpaidBreakStartTime, shiftType]);
 
   const effectiveBand = (overrideBand || defaultProfileBand) as NhsBandLevel;
   const effectiveRate = useMemo(() => {
-    if (overrideBand === 'Custom' && customRate) {
+    if ((overrideBand === 'Custom' || shiftType === 'BANK') && customRate) {
       return Number(customRate) || hourlyRate;
     }
     if (overrideBand && overrideBand !== 'Custom') {
       return getHourlyRateForBand(overrideBand as NhsBandLevel);
     }
     return hourlyRate;
-  }, [overrideBand, customRate, hourlyRate]);
+  }, [overrideBand, customRate, hourlyRate, shiftType]);
 
   const bandConfig = NHS_BAND_CONFIGS[effectiveBand] || NHS_BAND_CONFIGS['Band 2'];
 
@@ -185,10 +197,18 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
       startTime,
       endTime,
       unpaidBreakMinutes,
+      unpaidBreakStartTime: unpaidBreakStartTime || undefined,
       presetType,
       shiftType,
       overrideBand: overrideBand ? (overrideBand as NhsBandLevel) : undefined,
-      customHourlyRate: overrideBand === 'Custom' && customRate ? Number(customRate) : undefined,
+      customHourlyRate:
+        (overrideBand === 'Custom' || shiftType === 'BANK') && customRate
+          ? Number(customRate)
+          : undefined,
+      customEnhancementHourlyRate:
+        shiftType === 'BANK' && customEnhancementRate ? Number(customEnhancementRate) : undefined,
+      holidayPayHourlyRate:
+        shiftType === 'BANK' && holidayPayRate ? Number(holidayPayRate) : undefined,
     });
     onClose();
   };
@@ -276,7 +296,7 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
                 <span>
                   {shiftType === 'ANNUAL_LEAVE'
                     ? `UK Bank Holiday: ${bankHolidayName} (Booking leave deducts hours from your entitlement pot)`
-                    : `UK Bank Holiday: ${bankHolidayName} (Paid at +83% unsocial rate)`}
+                    : `UK Bank Holiday: ${bankHolidayName} (forecast at +${bandConfig.sundayAndHolidayEnhancementRate * 100}% unless a local bank rate is entered)`}
                 </span>
               </div>
             )}
@@ -297,6 +317,81 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
                 label="Leave Duration"
                 onSelectPreset={handleSelectPreset}
               />
+            )}
+
+            {shiftType !== 'ANNUAL_LEAVE' && unpaidBreakMinutes > 0 && (
+              <div className="form-group">
+                <label className="form-label" htmlFor="shift-modal-break-start">
+                  Unpaid Break Start (optional)
+                </label>
+                <input
+                  id="shift-modal-break-start"
+                  type="time"
+                  className="form-input"
+                  value={unpaidBreakStartTime}
+                  onChange={(event) => setUnpaidBreakStartTime(event.target.value)}
+                />
+                <span className="form-help">
+                  Set this when the break crosses a night, Saturday or Sunday pay boundary.
+                </span>
+              </div>
+            )}
+
+            {shiftType === 'BANK' && (
+              <div className="settings-section-card">
+                <div className="settings-section-title">Local bank payroll rates</div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="shift-modal-bank-basic-rate">
+                      Basic Rate (£/hr)
+                    </label>
+                    <input
+                      id="shift-modal-bank-basic-rate"
+                      type="number"
+                      step="0.0001"
+                      min="0"
+                      className="form-input"
+                      value={customRate}
+                      placeholder={hourlyRate.toFixed(4)}
+                      onChange={(event) => setCustomRate(event.target.value)}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="shift-modal-bank-enhancement-rate">
+                      Enhancement Rate (£/hr)
+                    </label>
+                    <input
+                      id="shift-modal-bank-enhancement-rate"
+                      type="number"
+                      step="0.0001"
+                      min="0"
+                      className="form-input"
+                      value={customEnhancementRate}
+                      placeholder="Defaults to basic rate"
+                      onChange={(event) => setCustomEnhancementRate(event.target.value)}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="shift-modal-holiday-rate">
+                      Holiday Pay (£/hr)
+                    </label>
+                    <input
+                      id="shift-modal-holiday-rate"
+                      type="number"
+                      step="0.0001"
+                      min="0"
+                      className="form-input"
+                      value={holidayPayRate}
+                      placeholder="e.g. 1.70"
+                      onChange={(event) => setHolidayPayRate(event.target.value)}
+                    />
+                  </div>
+                </div>
+                <span className="form-help">
+                  Bank rates are locally agreed. Enter the figures shown by payroll rather than
+                  assuming substantive AfC rates.
+                </span>
+              </div>
             )}
 
             {presetType === 'CUSTOM' && (

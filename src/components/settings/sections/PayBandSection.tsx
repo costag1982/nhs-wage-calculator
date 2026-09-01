@@ -35,13 +35,10 @@ export const PayBandSection: React.FC<PayBandSectionProps> = ({ profile, onUpdat
             value={profile.band}
             onChange={(e) => handleBandChange(e.target.value as NhsBandLevel)}
           >
-            {Object.keys(NHS_BAND_CONFIGS).map((band) => (
-              <option key={band} value={band}>
-                {band} (
-                {band === 'Band 2' || band === 'Band 3'
-                  ? 'Nights/Sat +41%, Sun +83%'
-                  : 'Nights/Sat +30%, Sun +60%'}
-                )
+            {Object.values(NHS_BAND_CONFIGS).map((config) => (
+              <option key={config.band} value={config.band}>
+                {config.band} (Nights/Sat +{config.nightEnhancementRate * 100}%, Sun +
+                {config.sundayAndHolidayEnhancementRate * 100}%)
               </option>
             ))}
           </select>
