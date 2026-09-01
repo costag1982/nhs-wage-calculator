@@ -343,19 +343,19 @@ export const PayPeriodsView: React.FC<PayPeriodsViewProps> = ({
               )}
             </div>
           ) : (
-            <div className="roster-table-card">
+            <div className="roster-table-card period-table-card">
               <div className="table-responsive">
                 <table className="roster-table period-reconciliation-table">
                   <thead>
                     <tr>
-                      <th className="text-left">Pay Period</th>
-                      <th className="text-right">Contracted Hours</th>
-                      <th className="text-right">Actual Hours Worked</th>
-                      <th className="text-right">Extra Hours</th>
-                      <th className="text-right">Extra Hours Paid</th>
-                      <th className="text-right">Potentially Unpaid</th>
-                      <th className="text-right">Enhancements Due</th>
-                      <th className="text-center">Actions</th>
+                      <th className="text-left th-period">Pay Period</th>
+                      <th className="text-center th-contracted">Contracted</th>
+                      <th className="text-center th-worked">Actual Worked</th>
+                      <th className="text-center th-extra">Extra Hours</th>
+                      <th className="text-center th-paid">Extra Paid</th>
+                      <th className="text-center th-unpaid">Potentially Unpaid</th>
+                      <th className="text-right th-enhancements">Enhancements Due</th>
+                      <th className="text-center th-actions">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -372,44 +372,49 @@ export const PayPeriodsView: React.FC<PayPeriodsViewProps> = ({
                         >
                           {/* 1. Pay Period */}
                           <td className="text-left">
-                            <div className="period-name-cell">
-                              <span className="period-month-title font-bold">
-                                {row.rosterMonthLabel}
-                              </span>
-                              {isActive && (
-                                <span className="period-active-pill">Active Roster</span>
-                              )}
-                            </div>
-                            <div className="period-sub-detail">
-                              <span>Paid: {row.payMonthLabel}</span>
-                              <span className="period-tax-tag">Tax Month {row.taxPeriod}</span>
-                              <span className="period-shift-count">{row.shiftCount} shifts</span>
+                            <div className="period-cell-main">
+                              <div className="period-title-row">
+                                <span className="period-month-name font-bold">
+                                  {row.rosterMonthLabel}
+                                </span>
+                                {isActive && (
+                                  <span className="period-active-tag">Active Roster</span>
+                                )}
+                              </div>
+                              <div className="period-meta-chips">
+                                <span className="meta-chip chip-pay">
+                                  Paid: {row.payMonthLabel}
+                                </span>
+                                <span className="meta-chip chip-tax">
+                                  Tax Month {row.taxPeriod}
+                                </span>
+                                <span className="meta-chip chip-shifts">
+                                  {row.shiftCount} shifts
+                                </span>
+                              </div>
                             </div>
                           </td>
 
                           {/* 2. Contracted Hours */}
-                          <td className="text-right tabular-nums font-semibold">
-                            {row.contractedHours > 0
-                              ? `${row.contractedHours.toFixed(2)} hrs`
-                              : '0.00 hrs'}
+                          <td className="text-center tabular-nums font-semibold">
+                            <div className="hours-cell">
+                              <span className="hours-val">
+                                {row.contractedHours > 0 ? row.contractedHours.toFixed(2) : '0.00'}
+                              </span>
+                              <span className="hours-unit">hrs</span>
+                            </div>
                           </td>
 
                           {/* 3. Actual hours worked */}
-                          <td className="text-right tabular-nums font-bold">
-                            <span
-                              style={{
-                                color:
-                                  row.actualHoursWorked > 0
-                                    ? 'var(--text-main)'
-                                    : 'var(--text-muted)',
-                              }}
-                            >
-                              {row.actualHoursWorked.toFixed(2)} hrs
-                            </span>
+                          <td className="text-center tabular-nums font-bold">
+                            <div className="hours-cell text-nhs-blue">
+                              <span className="hours-val">{row.actualHoursWorked.toFixed(2)}</span>
+                              <span className="hours-unit">hrs</span>
+                            </div>
                           </td>
 
                           {/* 4. Extra hours */}
-                          <td className="text-right tabular-nums">
+                          <td className="text-center tabular-nums">
                             {isPositiveExtra && (
                               <span className="badge-extra-hours badge-positive">
                                 +{row.extraHours.toFixed(2)} hrs
@@ -426,41 +431,41 @@ export const PayPeriodsView: React.FC<PayPeriodsViewProps> = ({
                           </td>
 
                           {/* 5. Extra Hours Paid */}
-                          <td className="text-right tabular-nums">
-                            <span
-                              className={`font-semibold ${
-                                row.extraHoursPaid > 0 ? 'text-indigo' : 'text-muted'
-                              }`}
-                            >
-                              {row.extraHoursPaid.toFixed(2)} hrs
-                            </span>
+                          <td className="text-center tabular-nums">
+                            {row.extraHoursPaid > 0 ? (
+                              <span className="badge-extra-paid">
+                                {row.extraHoursPaid.toFixed(2)} hrs
+                              </span>
+                            ) : (
+                              <span className="text-muted">0.00 hrs</span>
+                            )}
                           </td>
 
                           {/* 6. Potentially unpaid */}
-                          <td className="text-right tabular-nums">
+                          <td className="text-center tabular-nums">
                             {hasUnpaid ? (
-                              <div className="unpaid-cell-wrapper">
+                              <div className="unpaid-badge-container">
                                 <span
                                   className="badge-unpaid-warning"
                                   title={`Worked ${row.actualHoursWorked}h vs contracted ${row.contractedHours}h without overtime booking. Estimated value £${row.potentiallyUnpaidAmount.toFixed(2)}.`}
                                 >
-                                  <AlertTriangle size={12} />
-                                  {row.potentiallyUnpaidHours.toFixed(2)} hrs
+                                  <AlertTriangle size={13} />
+                                  <span>{row.potentiallyUnpaidHours.toFixed(2)} hrs</span>
                                 </span>
                                 <span className="unpaid-val-sub">
                                   £{row.potentiallyUnpaidAmount.toFixed(2)}
                                 </span>
                               </div>
                             ) : (
-                              <span className="text-muted">
+                              <div>
                                 {row.extraHours > 0 && row.extraHoursPaid >= row.extraHours ? (
                                   <span className="badge-unpaid-cleared">
-                                    <CheckCircle2 size={12} /> Paid
+                                    <CheckCircle2 size={13} /> All Paid
                                   </span>
                                 ) : (
-                                  '0.00 hrs'
+                                  <span className="text-muted font-normal">0.00 hrs</span>
                                 )}
-                              </span>
+                              </div>
                             )}
                           </td>
 
@@ -474,8 +479,7 @@ export const PayPeriodsView: React.FC<PayPeriodsViewProps> = ({
                               <div className="enhancements-pill-row">
                                 {row.enhancementHours.nightHours > 0 && (
                                   <span
-                                    className="enhancement-micro-badge"
-                                    style={{ background: '#f5f3ff', color: '#5b21b6' }}
+                                    className="enhancement-micro-badge badge-night"
                                     title="Night Duty Hours"
                                   >
                                     🌙 {row.enhancementHours.nightHours}h
@@ -483,8 +487,7 @@ export const PayPeriodsView: React.FC<PayPeriodsViewProps> = ({
                                 )}
                                 {row.enhancementHours.saturdayHours > 0 && (
                                   <span
-                                    className="enhancement-micro-badge"
-                                    style={{ background: '#fff1f2', color: '#9f1239' }}
+                                    className="enhancement-micro-badge badge-sat"
                                     title="Saturday Hours"
                                   >
                                     Sat: {row.enhancementHours.saturdayHours}h
@@ -492,8 +495,7 @@ export const PayPeriodsView: React.FC<PayPeriodsViewProps> = ({
                                 )}
                                 {row.enhancementHours.sundayHours > 0 && (
                                   <span
-                                    className="enhancement-micro-badge"
-                                    style={{ background: '#ecfdf5', color: '#047857' }}
+                                    className="enhancement-micro-badge badge-sun"
                                     title="Sunday Hours"
                                   >
                                     Sun: {row.enhancementHours.sundayHours}h
@@ -501,8 +503,7 @@ export const PayPeriodsView: React.FC<PayPeriodsViewProps> = ({
                                 )}
                                 {row.enhancementHours.bankHolidayHours > 0 && (
                                   <span
-                                    className="enhancement-micro-badge"
-                                    style={{ background: '#fffbeb', color: '#92400e' }}
+                                    className="enhancement-micro-badge badge-bh"
                                     title="Bank Holiday Hours"
                                   >
                                     BH: {row.enhancementHours.bankHolidayHours}h
@@ -521,7 +522,7 @@ export const PayPeriodsView: React.FC<PayPeriodsViewProps> = ({
                                 onClick={() => onSelectPeriodMonth(row.rosterMonthDate, 'CALENDAR')}
                                 title={`Open ${row.rosterMonthLabel} Monthly Roster`}
                               >
-                                <Calendar size={14} />
+                                <Calendar size={13} />
                                 <span>Roster</span>
                               </button>
                               <button
@@ -530,7 +531,7 @@ export const PayPeriodsView: React.FC<PayPeriodsViewProps> = ({
                                 onClick={() => onSelectPeriodMonth(row.rosterMonthDate, 'PAYSLIP')}
                                 title={`Open ${row.payMonthLabel} ESR Payslip`}
                               >
-                                <FileText size={14} />
+                                <FileText size={13} />
                                 <span>Payslip</span>
                               </button>
                             </div>
@@ -545,24 +546,27 @@ export const PayPeriodsView: React.FC<PayPeriodsViewProps> = ({
                     <tr className="period-totals-row">
                       <td className="text-left font-bold">
                         <div className="totals-label-wrapper">
-                          <span>TOTALS ({filteredRows.length} Periods)</span>
+                          <span className="totals-main-title">TOTALS</span>
+                          <span className="totals-sub-tag">({filteredRows.length} Periods)</span>
                         </div>
                       </td>
-                      <td className="text-right tabular-nums font-bold">
-                        {totals.totalContractedHours.toFixed(2)} hrs
+                      <td className="text-center tabular-nums font-bold">
+                        <div className="hours-cell">
+                          <span>{totals.totalContractedHours.toFixed(2)}</span>
+                          <span className="hours-unit">hrs</span>
+                        </div>
                       </td>
-                      <td
-                        className="text-right tabular-nums font-bold"
-                        style={{ color: 'var(--nhs-blue)' }}
-                      >
-                        {totals.totalActualHoursWorked.toFixed(2)} hrs
+                      <td className="text-center tabular-nums font-bold text-nhs-blue">
+                        <div className="hours-cell">
+                          <span>{totals.totalActualHoursWorked.toFixed(2)}</span>
+                          <span className="hours-unit">hrs</span>
+                        </div>
                       </td>
-                      <td className="text-right tabular-nums font-bold">
+                      <td className="text-center tabular-nums font-bold">
                         <span
-                          style={{
-                            color:
-                              totals.totalExtraHours >= 0 ? 'var(--emerald)' : 'var(--text-muted)',
-                          }}
+                          className={`badge-extra-hours ${
+                            totals.totalExtraHours >= 0 ? 'badge-positive' : 'badge-negative'
+                          }`}
                         >
                           {totals.totalExtraHours > 0
                             ? `+${totals.totalExtraHours.toFixed(2)}`
@@ -570,24 +574,37 @@ export const PayPeriodsView: React.FC<PayPeriodsViewProps> = ({
                           hrs
                         </span>
                       </td>
-                      <td className="text-right tabular-nums font-bold text-indigo">
-                        {totals.totalExtraHoursPaid.toFixed(2)} hrs
-                      </td>
-                      <td className="text-right tabular-nums font-bold">
-                        {totals.totalPotentiallyUnpaidHours > 0 ? (
-                          <span className="text-amber">
-                            {totals.totalPotentiallyUnpaidHours.toFixed(2)} hrs (£
-                            {totals.totalPotentiallyUnpaidAmount.toFixed(2)})
+                      <td className="text-center tabular-nums font-bold">
+                        {totals.totalExtraHoursPaid > 0 ? (
+                          <span className="badge-extra-paid">
+                            {totals.totalExtraHoursPaid.toFixed(2)} hrs
                           </span>
                         ) : (
-                          <span className="text-emerald">0.00 hrs</span>
+                          <span className="text-muted">0.00 hrs</span>
                         )}
                       </td>
-                      <td
-                        className="text-right tabular-nums font-bold"
-                        style={{ color: 'var(--indigo)' }}
-                      >
-                        £{totals.totalEnhancementsDue.toFixed(2)}
+                      <td className="text-center tabular-nums font-bold">
+                        {totals.totalPotentiallyUnpaidHours > 0 ? (
+                          <div className="unpaid-badge-container">
+                            <span className="badge-unpaid-warning">
+                              <AlertTriangle size={13} />
+                              <span>{totals.totalPotentiallyUnpaidHours.toFixed(2)} hrs</span>
+                            </span>
+                            <span className="unpaid-val-sub">
+                              (£{totals.totalPotentiallyUnpaidAmount.toFixed(2)})
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-emerald font-semibold">0.00 hrs</span>
+                        )}
+                      </td>
+                      <td className="text-right tabular-nums font-bold">
+                        <span
+                          className="enhancements-val font-bold"
+                          style={{ fontSize: '1.05rem' }}
+                        >
+                          £{totals.totalEnhancementsDue.toFixed(2)}
+                        </span>
                       </td>
                       <td className="text-center font-semibold text-muted">-</td>
                     </tr>

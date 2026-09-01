@@ -1584,70 +1584,149 @@ input[type='time']::-webkit-calendar-picker-indicator:hover {
 }
 
 /* Period Table Details */
+.period-table-card {
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.period-reconciliation-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
 .period-reconciliation-table th {
   padding: 0.85rem 1rem;
+  background: var(--bg-card-subtle);
+  font-size: 0.725rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border-medium);
+  white-space: nowrap;
 }
 
 .period-reconciliation-table td {
-  padding: 0.95rem 1rem;
+  padding: 1rem 1rem;
   vertical-align: middle;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.period-reconciliation-table tbody tr:nth-child(even) {
+  background-color: #fafbfd;
+}
+
+.period-reconciliation-table tbody tr:hover {
+  background-color: #f1f5f9;
 }
 
 .period-row-active {
-  background-color: #f0f7ff !important;
+  background-color: #eff6ff !important;
 }
 
 .period-row-active td {
-  border-color: #d0e5ff;
+  border-color: #bfdbfe;
 }
 
-.period-name-cell {
+/* Pay Period Cell */
+.period-cell-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.period-title-row {
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
-.period-month-title {
+.period-month-name {
   font-size: 0.95rem;
   color: var(--text-main);
+  letter-spacing: -0.01em;
 }
 
-.period-active-pill {
+.period-active-tag {
   background: var(--nhs-blue-light);
   color: var(--nhs-blue);
-  font-size: 0.6875rem;
+  border: 1px solid #bfdbfe;
+  font-size: 0.65rem;
   font-weight: 700;
   padding: 2px 7px;
   border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
-.period-sub-detail {
+.period-meta-chips {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  margin-top: 0.25rem;
+  gap: 0.35rem;
+  flex-wrap: nowrap;
 }
 
-.period-tax-tag {
-  background: var(--bg-card-subtle);
-  padding: 1px 5px;
+.meta-chip {
+  font-size: 0.7rem;
+  padding: 2px 6px;
   border-radius: 4px;
-  font-weight: 600;
+  white-space: nowrap;
 }
 
-.period-shift-count {
+.chip-pay {
+  background: #f1f5f9;
+  color: #475569;
   font-weight: 500;
+}
+
+.chip-tax {
+  background: #e0f2fe;
+  color: var(--nhs-blue);
+  font-weight: 700;
+}
+
+.chip-shifts {
+  background: #ffffff;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  font-weight: 500;
+}
+
+/* Hours cell formatting */
+.hours-cell {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.2rem;
+}
+
+.hours-val {
+  font-weight: 700;
+  font-size: 0.875rem;
+}
+
+.hours-unit {
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.text-nhs-blue {
+  color: var(--nhs-blue);
 }
 
 /* Badges for Extra Hours & Unpaid */
 .badge-extra-hours {
   display: inline-flex;
   align-items: center;
-  padding: 0.2rem 0.55rem;
+  justify-content: center;
+  min-width: 82px;
+  padding: 0.25rem 0.6rem;
   border-radius: 6px;
-  font-size: 0.8125rem;
+  font-size: 0.8rem;
   font-weight: 700;
 }
 
@@ -1666,12 +1745,27 @@ input[type='time']::-webkit-calendar-picker-indicator:hover {
 .badge-neutral {
   background-color: #f8fafc;
   color: #94a3b8;
+  border: 1px solid #e2e8f0;
 }
 
-.unpaid-cell-wrapper {
-  display: flex;
+.badge-extra-paid {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 75px;
+  padding: 0.25rem 0.55rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  background-color: #eef2ff;
+  color: #4338ca;
+  border: 1px solid #c7d2fe;
+}
+
+.unpaid-badge-container {
+  display: inline-flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: center;
   gap: 0.15rem;
 }
 
@@ -1685,7 +1779,7 @@ input[type='time']::-webkit-calendar-picker-indicator:hover {
   padding: 0.25rem 0.55rem;
   border-radius: 6px;
   font-weight: 700;
-  font-size: 0.8125rem;
+  font-size: 0.8rem;
 }
 
 .badge-unpaid-cleared {
@@ -1695,42 +1789,72 @@ input[type='time']::-webkit-calendar-picker-indicator:hover {
   color: var(--emerald);
   font-weight: 600;
   font-size: 0.75rem;
+  background: var(--emerald-light);
+  border: 1px solid var(--emerald-border);
+  padding: 2px 7px;
+  border-radius: 4px;
 }
 
 .unpaid-val-sub {
-  font-size: 0.725rem;
+  font-size: 0.7rem;
   color: var(--amber);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .enhancements-cell-wrapper {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 0.3rem;
+  gap: 0.25rem;
 }
 
 .enhancements-val {
   font-size: 0.95rem;
   color: var(--indigo);
+  letter-spacing: -0.01em;
 }
 
 .enhancements-pill-row {
   display: flex;
   gap: 0.25rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: flex-end;
+}
+
+.badge-night {
+  background: #f5f3ff;
+  color: #5b21b6;
+  border: 1px solid #ddd6fe;
+}
+
+.badge-sat {
+  background: #fff1f2;
+  color: #9f1239;
+  border: 1px solid #fecdd3;
+}
+
+.badge-sun {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.badge-bh {
+  background: #fffbeb;
+  color: #92400e;
+  border: 1px solid #fde68a;
 }
 
 .period-action-buttons {
   display: inline-flex;
-  gap: 0.35rem;
+  gap: 0.4rem;
+  align-items: center;
 }
 
 .period-jump-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: 0.35rem;
   padding: 0.35rem 0.65rem;
   font-size: 0.75rem;
   font-weight: 600;
@@ -1738,20 +1862,42 @@ input[type='time']::-webkit-calendar-picker-indicator:hover {
   border: 1px solid var(--border-medium);
   background-color: #ffffff;
   color: var(--text-main);
-  transition: all 0.15s;
+  transition: all 0.15s ease;
+  white-space: nowrap;
 }
 
 .period-jump-btn:hover {
   background-color: var(--nhs-blue-light);
   color: var(--nhs-blue);
   border-color: var(--nhs-blue);
+  transform: translateY(-1px);
 }
 
 .period-totals-row td {
-  background-color: var(--bg-card-subtle);
+  background-color: #f1f5f9 !important;
   border-top: 2px solid var(--border-medium);
-  padding: 1rem;
+  border-bottom: none;
+  padding: 1.1rem 1rem;
+  font-size: 0.875rem;
+}
+
+.totals-label-wrapper {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.totals-main-title {
   font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--text-main);
+  letter-spacing: 0.05em;
+}
+
+.totals-sub-tag {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
 }
 
 .period-empty-state {
