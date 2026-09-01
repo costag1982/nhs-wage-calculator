@@ -12,8 +12,6 @@ import {
 } from '../../domain/services/payPeriodService';
 import {
   Download,
-  Calendar,
-  FileText,
   AlertTriangle,
   CheckCircle2,
   Clock,
@@ -355,7 +353,6 @@ export const PayPeriodsView: React.FC<PayPeriodsViewProps> = ({
                       <th className="text-center th-paid">Extra Paid</th>
                       <th className="text-center th-unpaid">Potentially Unpaid</th>
                       <th className="text-right th-enhancements">Enhancements Due</th>
-                      <th className="text-center th-actions">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -374,9 +371,16 @@ export const PayPeriodsView: React.FC<PayPeriodsViewProps> = ({
                           <td className="text-left">
                             <div className="period-cell-main">
                               <div className="period-title-row">
-                                <span className="period-month-name font-bold">
+                                <button
+                                  type="button"
+                                  className="period-month-btn"
+                                  onClick={() =>
+                                    onSelectPeriodMonth(row.rosterMonthDate, 'CALENDAR')
+                                  }
+                                  title={`Open ${row.rosterMonthLabel} monthly roster`}
+                                >
                                   {row.rosterMonthLabel}
-                                </span>
+                                </button>
                                 {isActive && (
                                   <span className="period-active-tag">Active Roster</span>
                                 )}
@@ -512,30 +516,6 @@ export const PayPeriodsView: React.FC<PayPeriodsViewProps> = ({
                               </div>
                             </div>
                           </td>
-
-                          {/* Actions */}
-                          <td className="text-center">
-                            <div className="period-action-buttons">
-                              <button
-                                type="button"
-                                className="period-jump-btn"
-                                onClick={() => onSelectPeriodMonth(row.rosterMonthDate, 'CALENDAR')}
-                                title={`Open ${row.rosterMonthLabel} Monthly Roster`}
-                              >
-                                <Calendar size={13} />
-                                <span>Roster</span>
-                              </button>
-                              <button
-                                type="button"
-                                className="period-jump-btn"
-                                onClick={() => onSelectPeriodMonth(row.rosterMonthDate, 'PAYSLIP')}
-                                title={`Open ${row.payMonthLabel} ESR Payslip`}
-                              >
-                                <FileText size={13} />
-                                <span>Payslip</span>
-                              </button>
-                            </div>
-                          </td>
                         </tr>
                       );
                     })}
@@ -606,7 +586,6 @@ export const PayPeriodsView: React.FC<PayPeriodsViewProps> = ({
                           £{totals.totalEnhancementsDue.toFixed(2)}
                         </span>
                       </td>
-                      <td className="text-center font-semibold text-muted">-</td>
                     </tr>
                   </tfoot>
                 </table>
