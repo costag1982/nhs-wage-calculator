@@ -1665,18 +1665,6 @@ input[type='time']::-webkit-calendar-picker-indicator:hover {
   text-decoration: underline;
 }
 
-.period-active-tag {
-  background: var(--nhs-blue-light);
-  color: var(--nhs-blue);
-  border: 1px solid #bfdbfe;
-  font-size: 0.65rem;
-  font-weight: 700;
-  padding: 2px 7px;
-  border-radius: 999px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
 .period-meta-chips {
   display: flex;
   align-items: center;
@@ -1703,11 +1691,19 @@ input[type='time']::-webkit-calendar-picker-indicator:hover {
   font-weight: 700;
 }
 
-.chip-shifts {
-  background: #ffffff;
-  color: #64748b;
-  border: 1px solid #e2e8f0;
-  font-weight: 500;
+/* Dedicated Shifts Count Badge */
+.badge-shifts-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  background-color: #f8fafc;
+  border: 1px solid var(--border-medium);
+  color: var(--text-main);
+  font-size: 0.8125rem;
+  font-weight: 700;
 }
 
 /* Hours cell formatting */

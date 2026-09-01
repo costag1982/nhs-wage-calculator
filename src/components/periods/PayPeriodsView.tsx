@@ -109,13 +109,6 @@ export const PayPeriodsView: React.FC<PayPeriodsViewProps> = ({
     downloadCsvFile(`nhs_all_recorded_shifts_${dateStr}.csv`, csvContent);
   };
 
-  const isCurrentActiveRosterMonth = (rowDate: Date) => {
-    return (
-      rowDate.getFullYear() === activeMonthDate.getFullYear() &&
-      rowDate.getMonth() === activeMonthDate.getMonth()
-    );
-  };
-
   return (
     <div className="pay-periods-container">
       {/* Top Header & Navigation Banner */}
@@ -347,6 +340,7 @@ export const PayPeriodsView: React.FC<PayPeriodsViewProps> = ({
                   <thead>
                     <tr>
                       <th className="text-left th-period">Pay Period</th>
+                      <th className="text-center th-shifts">Total Shifts</th>
                       <th className="text-center th-contracted">Contracted</th>
                       <th className="text-center th-worked">Actual Worked</th>
                       <th className="text-center th-extra">Extra Hours</th>
@@ -357,16 +351,12 @@ export const PayPeriodsView: React.FC<PayPeriodsViewProps> = ({
                   </thead>
                   <tbody>
                     {filteredRows.map((row) => {
-                      const isActive = isCurrentActiveRosterMonth(row.rosterMonthDate);
                       const isPositiveExtra = row.extraHours > 0;
                       const isNegativeExtra = row.extraHours < 0;
                       const hasUnpaid = row.potentiallyUnpaidHours > 0;
 
                       return (
-                        <tr
-                          key={row.rosterMonthIso}
-                          className={isActive ? 'period-row-active' : ''}
-                        >
+                        <tr key={row.rosterMonthIso}>
                           {/* 1. Pay Period */}
                           <td className="text-left">
                             <div className="period-cell-main">
@@ -381,9 +371,6 @@ export const PayPeriodsView: React.FC<PayPeriodsViewProps> = ({
                                 >
                                   {row.rosterMonthLabel}
                                 </button>
-                                {isActive && (
-                                  <span className="period-active-tag">Active Roster</span>
-                                )}
                               </div>
                               <div className="period-meta-chips">
                                 <span className="meta-chip chip-pay">
@@ -392,14 +379,16 @@ export const PayPeriodsView: React.FC<PayPeriodsViewProps> = ({
                                 <span className="meta-chip chip-tax">
                                   Tax Month {row.taxPeriod}
                                 </span>
-                                <span className="meta-chip chip-shifts">
-                                  {row.shiftCount} shifts
-                                </span>
                               </div>
                             </div>
                           </td>
 
-                          {/* 2. Contracted Hours */}
+                          {/* 2. Total Shifts */}
+                          <td className="text-center tabular-nums">
+                            <span className="badge-shifts-count font-bold">{row.shiftCount}</span>
+                          </td>
+
+                          {/* 3. Contracted Hours */}
                           <td className="text-center tabular-nums font-semibold">
                             <div className="hours-cell">
                               <span className="hours-val">
@@ -409,7 +398,7 @@ export const PayPeriodsView: React.FC<PayPeriodsViewProps> = ({
                             </div>
                           </td>
 
-                          {/* 3. Actual hours worked */}
+                          {/* 4. Actual hours worked */}
                           <td className="text-center tabular-nums font-bold">
                             <div className="hours-cell text-nhs-blue">
                               <span className="hours-val">{row.actualHoursWorked.toFixed(2)}</span>
@@ -417,7 +406,7 @@ export const PayPeriodsView: React.FC<PayPeriodsViewProps> = ({
                             </div>
                           </td>
 
-                          {/* 4. Extra hours */}
+                          {/* 5. Extra hours */}
                           <td className="text-center tabular-nums">
                             {isPositiveExtra && (
                               <span className="badge-extra-hours badge-positive">
@@ -434,7 +423,7 @@ export const PayPeriodsView: React.FC<PayPeriodsViewProps> = ({
                             )}
                           </td>
 
-                          {/* 5. Extra Hours Paid */}
+                          {/* 6. Extra Hours Paid */}
                           <td className="text-center tabular-nums">
                             {row.extraHoursPaid > 0 ? (
                               <span className="badge-extra-paid">
@@ -445,7 +434,7 @@ export const PayPeriodsView: React.FC<PayPeriodsViewProps> = ({
                             )}
                           </td>
 
-                          {/* 6. Potentially unpaid */}
+                          {/* 7. Potentially unpaid */}
                           <td className="text-center tabular-nums">
                             {hasUnpaid ? (
                               <div className="unpaid-badge-container">
@@ -473,7 +462,7 @@ export const PayPeriodsView: React.FC<PayPeriodsViewProps> = ({
                             )}
                           </td>
 
-                          {/* 7. Enhancements due */}
+                          {/* 8. Enhancements due */}
                           <td className="text-right tabular-nums">
                             <div className="enhancements-cell-wrapper">
                               <span className="enhancements-val font-bold">
@@ -529,6 +518,9 @@ export const PayPeriodsView: React.FC<PayPeriodsViewProps> = ({
                           <span className="totals-main-title">TOTALS</span>
                           <span className="totals-sub-tag">({filteredRows.length} Periods)</span>
                         </div>
+                      </td>
+                      <td className="text-center tabular-nums font-bold">
+                        <span className="badge-shifts-count font-bold">{totals.totalShifts}</span>
                       </td>
                       <td className="text-center tabular-nums font-bold">
                         <div className="hours-cell">
