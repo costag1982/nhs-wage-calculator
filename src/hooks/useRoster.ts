@@ -1,70 +1,37 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Shift } from '../domain/models/Shift';
 import { calculateShiftBreakdown } from '../domain/services/shiftIntervalCalculator';
+import { manageShiftsUseCase } from '../application/use-cases/manageShiftsUseCase';
 import {
-  getAllShifts,
-  saveShift,
-  deleteShift as deleteShiftFromDb,
-  clearMonthShifts as clearMonthShiftsFromDb,
   exportDatabaseBinary,
   importDatabaseBinary,
-} from '../domain/database/sqliteService';
+} from '../infrastructure/storage/sqlite/sqliteClient';
 
-export const useRoster = (activeMonthDate: Date, onMutation?: () => void) => {
+export const useRoster = (
+  activeMonthDate: Date,
+  onMutation?: () => void,
+  shiftsUseCase = manageShiftsUseCase
+) => {
   const [allShifts, setAllShifts] = useState<Shift[]>([]);
   const [isShiftsLoaded, setIsShiftsLoaded] = useState(false);
 
   const reloadShiftsFromDatabase = useCallback(async () => {
     try {
-      const shifts = await getAllShifts();
-      const seenDates = new Set<string>();
-      const cleanShifts: Shift[] = [];
-      for (const s of shifts) {
-        if (!seenDates.has(s.date)) {
-          seenDates.add(s.date);
-          cleanShifts.push(s);
-        } else {
-          deleteShiftFromDb(s.id);
-        }
-      }
-
-      setAllShifts(
-        cleanShifts.map((s) => ({
-          ...s,
-          breakdown: calculateShiftBreakdown(s),
-        }))
-      );
+      const cleanShifts = await shiftsUseCase.loadCleanShifts();
+      setAllShifts(cleanShifts);
     } catch (e) {
       console.error('Failed to reload shifts from SQLite', e);
     }
-  }, []);
+  }, [shiftsUseCase]);
 
-  // Load shifts from SQLite database on mount
+  // Load shifts from database on mount
   useEffect(() => {
     let isMounted = true;
     (async () => {
       try {
-        const shifts = await getAllShifts();
+        const cleanShifts = await shiftsUseCase.loadCleanShifts();
         if (isMounted) {
-          // Clean up any historical duplicate shifts on the same date
-          const seenDates = new Set<string>();
-          const cleanShifts: Shift[] = [];
-          for (const s of shifts) {
-            if (!seenDates.has(s.date)) {
-              seenDates.add(s.date);
-              cleanShifts.push(s);
-            } else {
-              // Delete duplicate from SQLite
-              deleteShiftFromDb(s.id);
-            }
-          }
-
-          setAllShifts(
-            cleanShifts.map((s) => ({
-              ...s,
-              breakdown: calculateShiftBreakdown(s),
-            }))
-          );
+          setAllShifts(cleanShifts);
           setIsShiftsLoaded(true);
         }
       } catch (e) {
@@ -75,7 +42,7 @@ export const useRoster = (activeMonthDate: Date, onMutation?: () => void) => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [shiftsUseCase]);
 
   // Year-Month prefix e.g. "2026-07"
   const currentMonthPrefix = useMemo(() => {
@@ -115,14 +82,14 @@ export const useRoster = (activeMonthDate: Date, onMutation?: () => void) => {
             ? prev.map((s, idx) => (idx === existingIndex ? newShift : s))
             : [...prev, newShift];
 
-        saveShift(newShift).catch((err) => {
+        shiftsUseCase.saveShift(newShift).catch((err) => {
           console.error('Failed to save shift to SQLite storage', err);
         });
         onMutation?.();
         return next;
       });
     },
-    [onMutation]
+    [onMutation, shiftsUseCase]
   );
 
   const updateShift = useCallback(
@@ -135,7 +102,7 @@ export const useRoster = (activeMonthDate: Date, onMutation?: () => void) => {
             ...merged,
             breakdown: calculateShiftBreakdown(merged),
           };
-          saveShift(withBreakdown).catch((err) => {
+          shiftsUseCase.saveShift(withBreakdown).catch((err) => {
             console.error('Failed to update shift in SQLite', err);
           });
           onMutation?.();
@@ -143,27 +110,27 @@ export const useRoster = (activeMonthDate: Date, onMutation?: () => void) => {
         })
       );
     },
-    [onMutation]
+    [onMutation, shiftsUseCase]
   );
 
   const deleteShift = useCallback(
     (id: string) => {
       setAllShifts((prev) => prev.filter((s) => s.id !== id));
-      deleteShiftFromDb(id).catch((err) => {
+      shiftsUseCase.deleteShift(id).catch((err) => {
         console.error('Failed to delete shift from SQLite', err);
       });
       onMutation?.();
     },
-    [onMutation]
+    [onMutation, shiftsUseCase]
   );
 
   const clearMonthShifts = useCallback(() => {
     setAllShifts((prev) => prev.filter((s) => !s.date.startsWith(currentMonthPrefix)));
-    clearMonthShiftsFromDb(currentMonthPrefix).catch((err) => {
+    shiftsUseCase.clearMonthShifts(currentMonthPrefix).catch((err) => {
       console.error('Failed to clear month shifts in SQLite', err);
     });
     onMutation?.();
-  }, [currentMonthPrefix, onMutation]);
+  }, [currentMonthPrefix, onMutation, shiftsUseCase]);
 
   // Export SQLite database as a downloadable file
   const exportSqliteDatabase = useCallback(async () => {
@@ -184,16 +151,11 @@ export const useRoster = (activeMonthDate: Date, onMutation?: () => void) => {
     async (file: File) => {
       const buffer = await file.arrayBuffer();
       await importDatabaseBinary(buffer);
-      const shifts = await getAllShifts();
-      setAllShifts(
-        shifts.map((s) => ({
-          ...s,
-          breakdown: calculateShiftBreakdown(s),
-        }))
-      );
+      const cleanShifts = await shiftsUseCase.loadCleanShifts();
+      setAllShifts(cleanShifts);
       onMutation?.();
     },
-    [onMutation]
+    [onMutation, shiftsUseCase]
   );
 
   return {

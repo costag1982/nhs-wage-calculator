@@ -1,12 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import {
-  SyncStatus,
-  SyncPayload,
-  isSyncConfigured,
-  getLastSyncedAt,
-  executeSync,
-  recordLocalMutation,
-} from '../domain/services/cloudSyncService';
+import { SyncStatus, SyncPayload } from '../domain/ports/ISyncGateway';
+import { localStorageConfigStore } from '../infrastructure/config/localStorageConfigStore';
+import { synchroniseRotaUseCase } from '../application/use-cases/synchroniseRotaUseCase';
 
 interface UseCloudSyncProps {
   isStorageReady: boolean;
@@ -16,9 +11,11 @@ interface UseCloudSyncProps {
 export const useCloudSync = ({ isStorageReady, onRemoteDataLoaded }: UseCloudSyncProps) => {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(() => {
     if (typeof window !== 'undefined' && !navigator.onLine) return 'offline';
-    return isSyncConfigured() ? 'idle' : 'unconfigured';
+    return localStorageConfigStore.isConfigured() ? 'idle' : 'unconfigured';
   });
-  const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(() => getLastSyncedAt());
+  const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(() =>
+    localStorageConfigStore.getLastSyncedAt()
+  );
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -36,7 +33,7 @@ export const useCloudSync = ({ isStorageReady, onRemoteDataLoaded }: UseCloudSyn
       return;
     }
 
-    if (!isSyncConfigured()) {
+    if (!localStorageConfigStore.isConfigured()) {
       setSyncStatus('unconfigured');
       return;
     }
@@ -46,7 +43,7 @@ export const useCloudSync = ({ isStorageReady, onRemoteDataLoaded }: UseCloudSyn
     setErrorMessage(null);
 
     try {
-      const result = await executeSync();
+      const result = await synchroniseRotaUseCase.execute();
       setSyncStatus(result.status);
 
       if (result.status === 'synced') {
@@ -71,8 +68,8 @@ export const useCloudSync = ({ isStorageReady, onRemoteDataLoaded }: UseCloudSyn
 
   // Debounced sync for local changes
   const scheduleAutoSync = useCallback(() => {
-    recordLocalMutation();
-    if (!isSyncConfigured()) return;
+    localStorageConfigStore.recordLocalMutation();
+    if (!localStorageConfigStore.isConfigured()) return;
 
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
@@ -83,9 +80,9 @@ export const useCloudSync = ({ isStorageReady, onRemoteDataLoaded }: UseCloudSyn
     }, 1500);
   }, [performSync]);
 
-  // Initial sync when SQLite storage is ready
+  // Initial sync when storage is ready
   useEffect(() => {
-    if (isStorageReady && isSyncConfigured()) {
+    if (isStorageReady && localStorageConfigStore.isConfigured()) {
       const timer = setTimeout(() => {
         performSync();
       }, 0);
@@ -105,7 +102,7 @@ export const useCloudSync = ({ isStorageReady, onRemoteDataLoaded }: UseCloudSyn
     };
 
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && isSyncConfigured()) {
+      if (document.visibilityState === 'visible' && localStorageConfigStore.isConfigured()) {
         performSync();
       }
     };
@@ -130,7 +127,7 @@ export const useCloudSync = ({ isStorageReady, onRemoteDataLoaded }: UseCloudSyn
     syncStatus,
     lastSyncedAt,
     errorMessage,
-    isConfigured: isSyncConfigured(),
+    isConfigured: localStorageConfigStore.isConfigured(),
     triggerSync: performSync,
     scheduleAutoSync,
   };

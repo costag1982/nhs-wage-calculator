@@ -10,7 +10,10 @@ import {
   SyncPayload,
 } from '../domain/services/cloudSyncService';
 import * as sqliteService from '../domain/database/sqliteService';
-import { DEFAULT_GEMMA_PROFILE, DEFAULT_GEMMA_COMMITMENTS } from '../hooks/useContractSettings';
+import {
+  DEFAULT_GEMMA_PROFILE,
+  DEFAULT_GEMMA_COMMITMENTS,
+} from '../domain/constants/defaultProfile';
 import { DEFAULT_GEMMA_JUNE_SHIFTS } from '../domain/constants/defaultShifts';
 
 // Simple in-memory localStorage mock for node environment
