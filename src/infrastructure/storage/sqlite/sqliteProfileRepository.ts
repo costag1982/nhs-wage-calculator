@@ -14,7 +14,7 @@ export const createSqliteProfileRepository = (
   const getProfile = async (): Promise<EmployeeProfile> => {
     const db = await getDatabase();
     const res = db.exec(
-      'SELECT employee_name, job_title, department, location, band, contract_type, full_time_salary_fte, standard_full_time_hours, contracted_weekly_hours, custom_hourly_rate, tax_code, ni_category, pension_contribution_rate, tax_office_name, tax_office_ref, ni_number, employee_number, pay_method, years_of_service_tier, al_carry_over_hours, afc_absence_hourly_rate FROM employee_profile WHERE id = 1'
+      'SELECT employee_name, job_title, department, location, band, contract_type, full_time_salary_fte, standard_full_time_hours, contracted_weekly_hours, custom_hourly_rate, tax_code, ni_category, pension_contribution_rate, tax_office_name, tax_office_ref, ni_number, employee_number, pay_method, years_of_service_tier, al_carry_over_hours, afc_absence_hourly_rate, al_base_hours_override FROM employee_profile WHERE id = 1'
     );
     if (!res || res.length === 0 || res[0].values.length === 0) {
       return DEFAULT_GEMMA_PROFILE;
@@ -40,9 +40,12 @@ export const createSqliteProfileRepository = (
       niNumber: row[15] as string,
       employeeNumber: row[16] as string,
       payMethod: row[17] as string,
-      yearsOfServiceTier: (row[18] as EmployeeProfile['yearsOfServiceTier']) || 'UNDER_5',
+      yearsOfServiceTier: (row[18] as EmployeeProfile['yearsOfServiceTier']) || 'FIVE_TO_TEN',
       annualLeaveCarryOverHours: (row[19] as number) || 0,
-      afcAbsenceHourlyRateOverride: row[20] ? (row[20] as number) : undefined,
+      annualLeaveBaseHoursOverride:
+        row[21] !== null && row[21] !== undefined
+          ? (row[21] as number)
+          : DEFAULT_GEMMA_PROFILE.annualLeaveBaseHoursOverride,
     };
   };
 

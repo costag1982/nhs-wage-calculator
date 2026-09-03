@@ -66,8 +66,8 @@ export const saveProfileSync = (db: Database, profile: EmployeeProfile): void =>
       full_time_salary_fte, standard_full_time_hours, contracted_weekly_hours,
       custom_hourly_rate, tax_code, ni_category, pension_contribution_rate,
       tax_office_name, tax_office_ref, ni_number, employee_number, pay_method,
-      years_of_service_tier, al_carry_over_hours, afc_absence_hourly_rate
-    ) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      years_of_service_tier, al_carry_over_hours, afc_absence_hourly_rate, al_base_hours_override
+    ) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       profile.employeeName,
       profile.jobTitle,
@@ -87,9 +87,10 @@ export const saveProfileSync = (db: Database, profile: EmployeeProfile): void =>
       profile.niNumber,
       profile.employeeNumber,
       profile.payMethod,
-      profile.yearsOfServiceTier || 'UNDER_5',
+      profile.yearsOfServiceTier || 'FIVE_TO_TEN',
       profile.annualLeaveCarryOverHours || 0,
       profile.afcAbsenceHourlyRateOverride ?? null,
+      profile.annualLeaveBaseHoursOverride ?? null,
     ]
   );
 };
@@ -180,6 +181,11 @@ export const initializeSchema = (db: Database): void => {
     // Column already exists
   }
   try {
+    db.run('ALTER TABLE shifts ADD COLUMN status TEXT');
+  } catch {
+    // Column already exists
+  }
+  try {
     db.run("ALTER TABLE employee_profile ADD COLUMN years_of_service_tier TEXT DEFAULT 'UNDER_5'");
   } catch {
     // Column already exists
@@ -191,6 +197,11 @@ export const initializeSchema = (db: Database): void => {
   }
   try {
     db.run('ALTER TABLE employee_profile ADD COLUMN afc_absence_hourly_rate REAL');
+  } catch {
+    // Column already exists
+  }
+  try {
+    db.run('ALTER TABLE employee_profile ADD COLUMN al_base_hours_override REAL');
   } catch {
     // Column already exists
   }

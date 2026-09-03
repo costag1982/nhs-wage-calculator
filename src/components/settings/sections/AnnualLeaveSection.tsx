@@ -45,6 +45,31 @@ export const AnnualLeaveSection: React.FC<AnnualLeaveSectionProps> = ({
 
         <div className="form-row">
           <div className="form-group">
+            <label className="form-label" htmlFor="settings-al-base-override">
+              Base Entitlement (Hours)
+            </label>
+            <input
+              id="settings-al-base-override"
+              type="number"
+              step="0.5"
+              min="0"
+              placeholder="e.g. 192.5"
+              className="form-input"
+              value={profile.annualLeaveBaseHoursOverride ?? ''}
+              onChange={(e) =>
+                onUpdateProfile({
+                  annualLeaveBaseHoursOverride: e.target.value
+                    ? parseFloat(e.target.value)
+                    : undefined,
+                })
+              }
+            />
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+              Overrides standard formula (e.g. 192.5h from HealthRoster/ESR)
+            </span>
+          </div>
+
+          <div className="form-group">
             <label className="form-label" htmlFor="settings-carry-over">
               Carry-Over (Hours)
             </label>
@@ -62,17 +87,17 @@ export const AnnualLeaveSection: React.FC<AnnualLeaveSectionProps> = ({
               }
             />
           </div>
+        </div>
 
-          <div className="form-group">
-            <label className="form-label">Calculated Entitlement</label>
-            <div className="form-input-display">
-              <span style={{ fontSize: '0.75rem', color: '#166534', fontWeight: 600 }}>
-                Total Pot:
-              </span>
-              <span style={{ fontFamily: 'var(--font-heading)', fontSize: '0.875rem' }}>
-                {leaveEntitlement.totalEntitlementHours} hrs
-              </span>
-            </div>
+        <div className="form-group">
+          <label className="form-label">Total Leave Pot</label>
+          <div className="form-input-display">
+            <span style={{ fontSize: '0.75rem', color: '#166534', fontWeight: 600 }}>
+              Total Entitlement (Base + Carry-Over):
+            </span>
+            <span style={{ fontFamily: 'var(--font-heading)', fontSize: '0.875rem' }}>
+              {leaveEntitlement.totalEntitlementHours} hrs
+            </span>
           </div>
         </div>
 

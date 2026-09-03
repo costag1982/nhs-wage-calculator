@@ -53,12 +53,36 @@ export const SHIFT_PRESETS: ShiftPreset[] = [
 
 export const ANNUAL_LEAVE_PRESETS: ShiftPreset[] = [
   {
-    id: 'ANNUAL_LEAVE_FULL',
-    label: 'Full Day (7.5h)',
-    startTime: '08:00',
-    endTime: '15:30',
+    id: 'ANNUAL_LEAVE_NIGHT',
+    label: 'Night Shift (10h)',
+    startTime: '20:00',
+    endTime: '06:00',
     unpaidBreakMinutes: 0,
-    description: 'Standard NHS full day (7.5 hrs)',
+    description: '20:00 - 06:00 (10.0 hrs leave)',
+  },
+  {
+    id: 'ANNUAL_LEAVE_LONG_DAY',
+    label: 'Long Day (11h)',
+    startTime: '08:00',
+    endTime: '19:30',
+    unpaidBreakMinutes: 30,
+    description: '08:00 - 19:30 (11.0 hrs leave, 30m break)',
+  },
+  {
+    id: 'ANNUAL_LEAVE_FULL',
+    label: 'Standard Day (7.5h)',
+    startTime: '08:00',
+    endTime: '16:00',
+    unpaidBreakMinutes: 30,
+    description: '08:00 - 16:00 (7.5 hrs leave, 30m break)',
+  },
+  {
+    id: 'ANNUAL_LEAVE_TWILIGHT',
+    label: 'Twilight Shift (4h)',
+    startTime: '10:00',
+    endTime: '14:00',
+    unpaidBreakMinutes: 0,
+    description: '10:00 - 14:00 (4.0 hrs leave)',
   },
   {
     id: 'ANNUAL_LEAVE_HALF',
@@ -66,7 +90,7 @@ export const ANNUAL_LEAVE_PRESETS: ShiftPreset[] = [
     startTime: '08:00',
     endTime: '11:45',
     unpaidBreakMinutes: 0,
-    description: 'Standard NHS half day (3.75 hrs)',
+    description: '08:00 - 11:45 (3.75 hrs leave)',
   },
   {
     id: 'CUSTOM',

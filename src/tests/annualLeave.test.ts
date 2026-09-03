@@ -340,4 +340,340 @@ describe('NHS Annual Leave & Entitlement (AfC Section 13)', () => {
       expect(balance.remainingHours).toBe(178.25); // 182.0 - 3.75 = 178.25
     });
   });
+
+  describe('NHS Acute Ward Shift Deductions & Allocate HealthRoster Leave Tracking (192.5h Base)', () => {
+    const liveGemmaProfile: EmployeeProfile = {
+      ...gemmaProfile,
+      yearsOfServiceTier: 'FIVE_TO_TEN',
+      annualLeaveBaseHoursOverride: 192.5,
+    };
+
+    it('calculates 192.5h Base Entitlement matching Allocate HealthRoster', () => {
+      const entitlement = calculateAnnualLeaveEntitlement(liveGemmaProfile);
+
+      expect(entitlement.baseHours).toBe(192.5);
+      expect(entitlement.totalEntitlementHours).toBe(192.5);
+      // Split proportionally (29 AL days / 37 total days)
+      expect(entitlement.annualLeaveDays).toBe(29);
+      expect(entitlement.bankHolidayDays).toBe(8);
+      expect(entitlement.annualLeaveHours + entitlement.bankHolidayHours).toBe(192.5);
+    });
+
+    it('deducts exact net working hours per shift (excluding unpaid meal breaks)', () => {
+      const wardShifts: Shift[] = [
+        // 10.0h Night Duty (20:00 - 06:00, 0m break)
+        {
+          id: 'al-night',
+          date: '2026-06-03',
+          startTime: '20:00',
+          endTime: '06:00',
+          unpaidBreakMinutes: 0,
+          shiftType: 'ANNUAL_LEAVE',
+          presetType: 'ANNUAL_LEAVE_NIGHT',
+        },
+        // 11.0h Long Day (08:00 - 19:30, 30m break: 11.5h - 0.5h = 11.0h)
+        {
+          id: 'al-longday',
+          date: '2026-06-14',
+          startTime: '08:00',
+          endTime: '19:30',
+          unpaidBreakMinutes: 30,
+          shiftType: 'ANNUAL_LEAVE',
+          presetType: 'ANNUAL_LEAVE_LONG_DAY',
+        },
+        // 4.0h Twilight Shift (10:00 - 14:00, 0m break)
+        {
+          id: 'al-twilight',
+          date: '2026-06-17',
+          startTime: '10:00',
+          endTime: '14:00',
+          unpaidBreakMinutes: 0,
+          shiftType: 'ANNUAL_LEAVE',
+          presetType: 'ANNUAL_LEAVE_TWILIGHT',
+        },
+        // 7.5h Standard Day (08:00 - 16:00, 30m break: 8.0h - 0.5h = 7.5h)
+        {
+          id: 'al-standard',
+          date: '2026-06-22',
+          startTime: '08:00',
+          endTime: '16:00',
+          unpaidBreakMinutes: 30,
+          shiftType: 'ANNUAL_LEAVE',
+          presetType: 'ANNUAL_LEAVE_FULL',
+        },
+      ];
+
+      const balance = calculateAnnualLeaveBalance(
+        liveGemmaProfile,
+        wardShifts,
+        new Date(2026, 5, 1)
+      );
+
+      // Total deducted: 10.0 + 11.0 + 4.0 + 7.5 = 32.5 hours
+      expect(balance.takenYearToDateHours).toBe(32.5);
+      expect(balance.remainingHours).toBe(160.0); // 192.5 - 32.5 = 160.0
+    });
+
+    it('reproduces Gemma live HealthRoster numbers: 192.5h Base, 111.5h Taken, 74.0h Approved -> 7.0h Remaining', () => {
+      // Past taken shifts: 111.5 hours
+      const pastShifts: Shift[] = [
+        {
+          id: 'past-1',
+          date: '2026-04-02',
+          startTime: '08:00',
+          endTime: '19:30',
+          unpaidBreakMinutes: 30, // 11.0h
+          shiftType: 'ANNUAL_LEAVE',
+        },
+        {
+          id: 'past-2',
+          date: '2026-05-10',
+          startTime: '20:00',
+          endTime: '06:00',
+          unpaidBreakMinutes: 0, // 10.0h
+          shiftType: 'ANNUAL_LEAVE',
+        },
+        {
+          id: 'past-3',
+          date: '2026-06-01',
+          startTime: '08:00',
+          endTime: '19:30',
+          unpaidBreakMinutes: 30, // 11.0h
+          shiftType: 'ANNUAL_LEAVE',
+        },
+        {
+          id: 'past-bulk',
+          date: '2026-07-01',
+          startTime: '00:00',
+          endTime: '23:30',
+          unpaidBreakMinutes: 0, // 23.5h
+          shiftType: 'ANNUAL_LEAVE',
+        },
+        {
+          id: 'past-bulk-2',
+          date: '2026-08-01',
+          startTime: '00:00',
+          endTime: '23:00',
+          unpaidBreakMinutes: 0, // 23.0h
+          shiftType: 'ANNUAL_LEAVE',
+        },
+        {
+          id: 'past-bulk-3',
+          date: '2026-08-15',
+          startTime: '00:00',
+          endTime: '23:00',
+          unpaidBreakMinutes: 0, // 23.0h
+          shiftType: 'ANNUAL_LEAVE',
+        },
+        {
+          id: 'past-bulk-4',
+          date: '2026-09-01',
+          startTime: '10:00',
+          endTime: '20:00',
+          unpaidBreakMinutes: 0, // 10.0h
+          shiftType: 'ANNUAL_LEAVE',
+        },
+      ]; // Total past: 11 + 10 + 11 + 23.5 + 23 + 23 + 10 = 111.5h
+
+      // Future approved shifts: 74.0 hours
+      const futureShifts: Shift[] = [
+        {
+          id: 'future-1',
+          date: '2026-10-12',
+          startTime: '08:00',
+          endTime: '19:30',
+          unpaidBreakMinutes: 30, // 11.0h
+          shiftType: 'ANNUAL_LEAVE',
+        },
+        {
+          id: 'future-2',
+          date: '2026-11-05',
+          startTime: '20:00',
+          endTime: '06:00',
+          unpaidBreakMinutes: 0, // 10.0h
+          shiftType: 'ANNUAL_LEAVE',
+        },
+        {
+          id: 'future-bulk-1',
+          date: '2026-12-20',
+          startTime: '00:00',
+          endTime: '23:00',
+          unpaidBreakMinutes: 0, // 23.0h
+          shiftType: 'ANNUAL_LEAVE',
+        },
+        {
+          id: 'future-bulk-2',
+          date: '2027-01-10',
+          startTime: '00:00',
+          endTime: '23:00',
+          unpaidBreakMinutes: 0, // 23.0h
+          shiftType: 'ANNUAL_LEAVE',
+        },
+        {
+          id: 'future-3',
+          date: '2027-02-14',
+          startTime: '10:00',
+          endTime: '17:00',
+          unpaidBreakMinutes: 0, // 7.0h
+          shiftType: 'ANNUAL_LEAVE',
+        },
+      ]; // Total future: 11 + 10 + 23 + 23 + 7 = 74.0h
+
+      const allLeave = [...pastShifts, ...futureShifts];
+      const balance = calculateAnnualLeaveBalance(liveGemmaProfile, allLeave, new Date(2026, 8, 3)); // Sept 3, 2026
+
+      expect(balance.entitlement.totalEntitlementHours).toBe(192.5);
+      expect(balance.takenHours).toBe(111.5);
+      expect(balance.approvedHours).toBe(74.0);
+      expect(balance.remainingHours).toBe(7.0);
+      expect(balance.countdownText).toBe('Entitlement ends in 6 months and 28 days');
+    });
+
+    it('groups consecutive dates into a single leave episode (e.g. 7 days)', () => {
+      const episodeShifts: Shift[] = [
+        {
+          id: 'ep1',
+          date: '2026-04-02',
+          startTime: '08:00',
+          endTime: '16:00',
+          unpaidBreakMinutes: 30,
+          shiftType: 'ANNUAL_LEAVE',
+        },
+        {
+          id: 'ep2',
+          date: '2026-04-03',
+          startTime: '08:00',
+          endTime: '16:00',
+          unpaidBreakMinutes: 30,
+          shiftType: 'ANNUAL_LEAVE',
+        },
+        {
+          id: 'ep3',
+          date: '2026-04-04',
+          startTime: '08:00',
+          endTime: '16:00',
+          unpaidBreakMinutes: 30,
+          shiftType: 'ANNUAL_LEAVE',
+        },
+        {
+          id: 'ep4',
+          date: '2026-04-05',
+          startTime: '08:00',
+          endTime: '16:00',
+          unpaidBreakMinutes: 30,
+          shiftType: 'ANNUAL_LEAVE',
+        },
+        {
+          id: 'ep5',
+          date: '2026-04-06',
+          startTime: '08:00',
+          endTime: '16:00',
+          unpaidBreakMinutes: 30,
+          shiftType: 'ANNUAL_LEAVE',
+        },
+        {
+          id: 'ep6',
+          date: '2026-04-07',
+          startTime: '08:00',
+          endTime: '16:00',
+          unpaidBreakMinutes: 30,
+          shiftType: 'ANNUAL_LEAVE',
+        },
+        {
+          id: 'ep7',
+          date: '2026-04-08',
+          startTime: '08:00',
+          endTime: '16:00',
+          unpaidBreakMinutes: 30,
+          shiftType: 'ANNUAL_LEAVE',
+        },
+      ];
+
+      const balance = calculateAnnualLeaveBalance(
+        liveGemmaProfile,
+        episodeShifts,
+        new Date(2026, 3, 1)
+      );
+      expect(balance.episodes).toHaveLength(1);
+      expect(balance.episodes[0].daysCount).toBe(7);
+      expect(balance.episodes[0].startDate).toBe('2026-04-02');
+      expect(balance.episodes[0].endDate).toBe('2026-04-08');
+      expect(balance.episodes[0].formattedDateRange).toBe('02 Apr 2026 - 08 Apr 2026');
+      expect(balance.episodes[0].totalHours).toBe(52.5); // 7 * 7.5h
+    });
+
+    it('handles 7-day full week block booking deducting exactly 26.0 contracted hours', () => {
+      // 7 days distributed totaling 26.0h (5x 3.7h + 2x 3.75h = 26.0h)
+      const weekBlockShifts: Shift[] = [
+        {
+          id: 'b1',
+          date: '2026-04-02',
+          startTime: '08:00',
+          endTime: '11:42',
+          unpaidBreakMinutes: 0,
+          shiftType: 'ANNUAL_LEAVE',
+        },
+        {
+          id: 'b2',
+          date: '2026-04-03',
+          startTime: '08:00',
+          endTime: '11:42',
+          unpaidBreakMinutes: 0,
+          shiftType: 'ANNUAL_LEAVE',
+        },
+        {
+          id: 'b3',
+          date: '2026-04-04',
+          startTime: '08:00',
+          endTime: '11:42',
+          unpaidBreakMinutes: 0,
+          shiftType: 'ANNUAL_LEAVE',
+        },
+        {
+          id: 'b4',
+          date: '2026-04-05',
+          startTime: '08:00',
+          endTime: '11:42',
+          unpaidBreakMinutes: 0,
+          shiftType: 'ANNUAL_LEAVE',
+        },
+        {
+          id: 'b5',
+          date: '2026-04-06',
+          startTime: '08:00',
+          endTime: '11:42',
+          unpaidBreakMinutes: 0,
+          shiftType: 'ANNUAL_LEAVE',
+        },
+        {
+          id: 'b6',
+          date: '2026-04-07',
+          startTime: '08:00',
+          endTime: '11:45',
+          unpaidBreakMinutes: 0,
+          shiftType: 'ANNUAL_LEAVE',
+        },
+        {
+          id: 'b7',
+          date: '2026-04-08',
+          startTime: '08:00',
+          endTime: '11:45',
+          unpaidBreakMinutes: 0,
+          shiftType: 'ANNUAL_LEAVE',
+        },
+      ];
+
+      const balance = calculateAnnualLeaveBalance(
+        liveGemmaProfile,
+        weekBlockShifts,
+        new Date(2026, 3, 1)
+      );
+      expect(balance.episodes).toHaveLength(1);
+      expect(balance.episodes[0].daysCount).toBe(7);
+      expect(balance.episodes[0].formattedDateRange).toBe('02 Apr 2026 - 08 Apr 2026');
+      expect(balance.episodes[0].totalHours).toBe(26.0);
+      expect(balance.takenYearToDateHours).toBe(26.0);
+      expect(balance.remainingHours).toBe(166.5); // 192.5 - 26.0 = 166.5
+    });
+  });
 });

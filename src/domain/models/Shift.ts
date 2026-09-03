@@ -11,6 +11,9 @@ export type ShiftPresetType =
   | 'LATE'
   | 'ANNUAL_LEAVE_FULL'
   | 'ANNUAL_LEAVE_HALF'
+  | 'ANNUAL_LEAVE_NIGHT'
+  | 'ANNUAL_LEAVE_LONG_DAY'
+  | 'ANNUAL_LEAVE_TWILIGHT'
   | 'CUSTOM';
 
 export interface ShiftPreset {
@@ -32,6 +35,7 @@ export interface ShiftHoursBreakdown {
 }
 
 export type ShiftWorkType = 'SUBSTANTIVE' | 'OVERTIME' | 'BANK' | 'ANNUAL_LEAVE';
+export type ShiftStatus = 'APPROVED' | 'REQUESTED' | 'REJECTED';
 
 export interface Shift {
   id: string;
@@ -42,6 +46,7 @@ export interface Shift {
   unpaidBreakStartTime?: string; // Optional "HH:mm" location of the unpaid break
   presetType?: ShiftPresetType;
   shiftType?: ShiftWorkType; // 'SUBSTANTIVE' (default), 'OVERTIME', 'BANK', or 'ANNUAL_LEAVE'
+  status?: ShiftStatus; // Approval status in rostering (e.g. 'APPROVED', 'REQUESTED', 'REJECTED')
   overrideBand?: NhsBandLevel;
   customHourlyRate?: number;
   customEnhancementHourlyRate?: number; // Local bank enhancement rate, where supplied

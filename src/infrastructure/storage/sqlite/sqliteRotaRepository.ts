@@ -9,7 +9,7 @@ export const createSqliteRotaRepository = (
   const getAllShifts = async (): Promise<Shift[]> => {
     const db = await getDatabase();
     const res = db.exec(
-      'SELECT id, date, start_time, end_time, unpaid_break_minutes, preset_type, override_band, custom_hourly_rate, shift_type, unpaid_break_start_time, custom_enhancement_hourly_rate, holiday_pay_hourly_rate FROM shifts ORDER BY date ASC'
+      'SELECT id, date, start_time, end_time, unpaid_break_minutes, preset_type, override_band, custom_hourly_rate, shift_type, unpaid_break_start_time, custom_enhancement_hourly_rate, holiday_pay_hourly_rate, status FROM shifts ORDER BY date ASC'
     );
     if (!res || res.length === 0) return [];
 
@@ -29,6 +29,7 @@ export const createSqliteRotaRepository = (
         unpaidBreakMinutes: (rowObj.unpaid_break_minutes as number) || 0,
         presetType: rowObj.preset_type as Shift['presetType'],
         shiftType: (rowObj.shift_type as Shift['shiftType']) || 'SUBSTANTIVE',
+        status: rowObj.status ? (rowObj.status as Shift['status']) : undefined,
         overrideBand: rowObj.override_band
           ? (rowObj.override_band as Shift['overrideBand'])
           : undefined,
@@ -51,7 +52,7 @@ export const createSqliteRotaRepository = (
   const saveShift = async (shift: Shift): Promise<void> => {
     const db = await getDatabase();
     db.run(
-      'INSERT OR REPLACE INTO shifts (id, date, start_time, end_time, unpaid_break_minutes, preset_type, override_band, custom_hourly_rate, shift_type, unpaid_break_start_time, custom_enhancement_hourly_rate, holiday_pay_hourly_rate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT OR REPLACE INTO shifts (id, date, start_time, end_time, unpaid_break_minutes, preset_type, override_band, custom_hourly_rate, shift_type, unpaid_break_start_time, custom_enhancement_hourly_rate, holiday_pay_hourly_rate, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [
         shift.id,
         shift.date,
@@ -65,6 +66,7 @@ export const createSqliteRotaRepository = (
         shift.unpaidBreakStartTime ?? null,
         shift.customEnhancementHourlyRate ?? null,
         shift.holidayPayHourlyRate ?? null,
+        shift.status ?? null,
       ]
     );
     await persistToIndexedDb(db);
@@ -87,7 +89,7 @@ export const createSqliteRotaRepository = (
     db.run('DELETE FROM shifts');
     for (const shift of shifts) {
       db.run(
-        'INSERT INTO shifts (id, date, start_time, end_time, unpaid_break_minutes, preset_type, override_band, custom_hourly_rate, shift_type, unpaid_break_start_time, custom_enhancement_hourly_rate, holiday_pay_hourly_rate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO shifts (id, date, start_time, end_time, unpaid_break_minutes, preset_type, override_band, custom_hourly_rate, shift_type, unpaid_break_start_time, custom_enhancement_hourly_rate, holiday_pay_hourly_rate, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         [
           shift.id,
           shift.date,
@@ -101,6 +103,7 @@ export const createSqliteRotaRepository = (
           shift.unpaidBreakStartTime ?? null,
           shift.customEnhancementHourlyRate ?? null,
           shift.holidayPayHourlyRate ?? null,
+          shift.status ?? null,
         ]
       );
     }

@@ -1,5 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import { Shift, ShiftPresetType, ShiftPreset, ShiftWorkType } from '../../domain/models/Shift';
+import {
+  Shift,
+  ShiftPresetType,
+  ShiftPreset,
+  ShiftWorkType,
+  ShiftStatus,
+} from '../../domain/models/Shift';
 import { EmployeeProfile, NhsBandLevel } from '../../domain/models/Contract';
 import { calculateShiftBreakdown } from '../../domain/services/shiftIntervalCalculator';
 import { getHourlyRateForBand } from '../../domain/services/grossPayCalculator';
@@ -15,6 +21,7 @@ import { ShiftTimeInputs } from './shift-modal/ShiftTimeInputs';
 import { ShiftBandSelector } from './shift-modal/ShiftBandSelector';
 import { ShiftBreakdownPreview } from './shift-modal/ShiftBreakdownPreview';
 import { SHIFT_PRESETS, ANNUAL_LEAVE_PRESETS } from './shift-modal/shiftModalConstants';
+import { formatEpisodeDateRange } from '../../domain/services/annualLeaveCalculator';
 import { X, Trash2, Check, Sparkles, AlertTriangle, Info } from 'lucide-react';
 
 export { calculateShiftGrossImpact };
@@ -30,6 +37,7 @@ export interface ShiftModalProps {
   profile?: EmployeeProfile;
   onClose: () => void;
   onSave: (shiftData: Omit<Shift, 'id' | 'breakdown'>) => void;
+  onSaveBatch?: (shiftsData: Omit<Shift, 'id' | 'breakdown'>[]) => void;
   onDelete?: (id: string) => void;
 }
 
@@ -52,6 +60,7 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
   profile,
   onClose,
   onSave,
+  onSaveBatch,
   onDelete,
 }) => {
   const [shiftType, setShiftType] = useState<ShiftWorkType>(
@@ -84,6 +93,21 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
   );
   const [holidayPayRate, setHolidayPayRate] = useState<string>(
     initialShift?.holidayPayHourlyRate ? String(initialShift.holidayPayHourlyRate) : ''
+  );
+  const [shiftStatus, setShiftStatus] = useState<ShiftStatus>(initialShift?.status || 'APPROVED');
+  const [bookingMode, setBookingMode] = useState<'SINGLE' | 'BLOCK'>('SINGLE');
+  const [blockStartDate, setBlockStartDate] = useState<string>(selectedDate || '');
+  const [blockEndDate, setBlockEndDate] = useState<string>(() => {
+    if (!selectedDate) return '';
+    const [y, m, d] = selectedDate.split('-').map(Number);
+    const end = new Date(Date.UTC(y, m - 1, d + 6)); // default 7-day period
+    return end.toISOString().slice(0, 10);
+  });
+  const [blockDeductionType, setBlockDeductionType] = useState<
+    'CONTRACTED_WEEK' | 'DAILY_PRESET' | 'CUSTOM_HOURS'
+  >('CONTRACTED_WEEK');
+  const [blockCustomHours, setBlockCustomHours] = useState<string>(
+    String(profile?.contractedWeeklyHours || 26.0)
   );
 
   const conflictingShift = useMemo(() => {
@@ -134,6 +158,46 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
       shiftType,
     });
   }, [selectedDate, startTime, endTime, unpaidBreakMinutes, unpaidBreakStartTime, shiftType]);
+
+  const blockDaysCount = useMemo(() => {
+    if (!blockStartDate || !blockEndDate) return 1;
+    const start = new Date(`${blockStartDate}T00:00:00`);
+    const end = new Date(`${blockEndDate}T00:00:00`);
+    const diff = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+    return Math.max(1, diff + 1);
+  }, [blockStartDate, blockEndDate]);
+
+  const blockTotalHours = useMemo(() => {
+    if (blockDeductionType === 'CONTRACTED_WEEK') {
+      const contractedWeekly = profile?.contractedWeeklyHours || 26.0;
+      const weeks = blockDaysCount / 7;
+      return Math.round(weeks * contractedWeekly * 10) / 10;
+    }
+    if (blockDeductionType === 'CUSTOM_HOURS') {
+      return parseFloat(blockCustomHours) || 0;
+    }
+    return Math.round(breakdown.totalWorkedHours * blockDaysCount * 10) / 10;
+  }, [
+    blockDeductionType,
+    blockDaysCount,
+    profile?.contractedWeeklyHours,
+    blockCustomHours,
+    breakdown.totalWorkedHours,
+  ]);
+
+  const generateDatesInRange = (startStr: string, endStr: string): string[] => {
+    const dates: string[] = [];
+    const [sy, sm, sd] = startStr.split('-').map(Number);
+    const [ey, em, ed] = endStr.split('-').map(Number);
+    const curr = new Date(Date.UTC(sy, sm - 1, sd));
+    const end = new Date(Date.UTC(ey, em - 1, ed));
+
+    while (curr <= end) {
+      dates.push(curr.toISOString().slice(0, 10));
+      curr.setUTCDate(curr.getUTCDate() + 1);
+    }
+    return dates;
+  };
 
   const effectiveBand = (overrideBand || defaultProfileBand) as NhsBandLevel;
   const effectiveRate = useMemo(() => {
@@ -191,7 +255,44 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (endTimeError) return;
+    if (endTimeError && bookingMode === 'SINGLE') return;
+
+    if (shiftType === 'ANNUAL_LEAVE' && bookingMode === 'BLOCK') {
+      const dates = generateDatesInRange(blockStartDate, blockEndDate);
+      const totalH = blockTotalHours;
+      const count = dates.length;
+      let remainingH = totalH;
+
+      const batchShifts: Omit<Shift, 'id' | 'breakdown'>[] = dates.map((dateStr, idx) => {
+        const dayH =
+          idx === count - 1 ? remainingH : Math.round((remainingH / (count - idx)) * 10) / 10;
+        remainingH = Math.max(0, Math.round((remainingH - dayH) * 10) / 10);
+
+        const totalMinutes = Math.round(dayH * 60);
+        const endHours = 8 + Math.floor(totalMinutes / 60);
+        const endMinutes = totalMinutes % 60;
+        const formattedEndTime = `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`;
+
+        return {
+          date: dateStr,
+          startTime: '08:00',
+          endTime: formattedEndTime,
+          unpaidBreakMinutes: 0,
+          shiftType: 'ANNUAL_LEAVE',
+          presetType: 'CUSTOM',
+          status: shiftStatus,
+        };
+      });
+
+      if (onSaveBatch) {
+        onSaveBatch(batchShifts);
+      } else {
+        batchShifts.forEach((s) => onSave(s));
+      }
+      onClose();
+      return;
+    }
+
     onSave({
       date: selectedDate,
       startTime,
@@ -209,29 +310,43 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
         shiftType === 'BANK' && customEnhancementRate ? Number(customEnhancementRate) : undefined,
       holidayPayHourlyRate:
         shiftType === 'BANK' && holidayPayRate ? Number(holidayPayRate) : undefined,
+      status: shiftType === 'ANNUAL_LEAVE' ? shiftStatus : undefined,
     });
     onClose();
   };
 
-  const modalTitle = initialShift
+  const isEditing = Boolean(initialShift && initialShift.id);
+
+  const modalTitle = isEditing
     ? shiftType === 'ANNUAL_LEAVE'
       ? 'Edit Annual Leave'
       : 'Edit Shift'
     : shiftType === 'ANNUAL_LEAVE'
-      ? 'Book Annual Leave'
+      ? bookingMode === 'BLOCK'
+        ? 'Book Block Annual Leave'
+        : 'Book Annual Leave'
       : conflictingShift
         ? 'Replace Shift'
         : 'Add Shift';
 
-  const saveButtonLabel = initialShift
+  const saveButtonLabel = isEditing
     ? shiftType === 'ANNUAL_LEAVE'
       ? 'Update Leave'
       : 'Update Shift'
     : shiftType === 'ANNUAL_LEAVE'
-      ? 'Book Leave'
+      ? bookingMode === 'BLOCK'
+        ? `Book Block Leave (${blockTotalHours.toFixed(1)}h)`
+        : 'Book Leave'
       : conflictingShift
         ? 'Replace & Save'
         : 'Save Shift';
+
+  const headerSubtitle = useMemo(() => {
+    if (shiftType === 'ANNUAL_LEAVE' && bookingMode === 'BLOCK') {
+      return `${formatEpisodeDateRange(blockStartDate, blockEndDate)} (${blockDaysCount} ${blockDaysCount === 1 ? 'day' : 'days'})`;
+    }
+    return formattedDate;
+  }, [shiftType, bookingMode, blockStartDate, blockEndDate, blockDaysCount, formattedDate]);
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -239,7 +354,7 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
         <div className="modal-header">
           <div>
             <h2 className="modal-title">{modalTitle}</h2>
-            <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>{formattedDate}</p>
+            <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>{headerSubtitle}</p>
           </div>
           <button
             type="button"
@@ -303,20 +418,246 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
 
             <ShiftTypeSelector shiftType={shiftType} onSelectType={handleSwitchShiftType} />
 
-            {shiftType !== 'ANNUAL_LEAVE' ? (
-              <ShiftTemplatePicker
-                presetType={presetType}
-                presets={SHIFT_PRESETS}
-                label="Shift Template"
-                onSelectPreset={handleSelectPreset}
-              />
+            {shiftType === 'ANNUAL_LEAVE' && !isEditing && (
+              <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '0.9rem' }}>
+                <button
+                  type="button"
+                  className={`btn ${bookingMode === 'SINGLE' ? 'btn-primary' : 'btn-secondary'}`}
+                  style={{ flex: 1, padding: '0.45rem', fontSize: '0.8125rem' }}
+                  onClick={() => setBookingMode('SINGLE')}
+                >
+                  Single Shift
+                </button>
+                <button
+                  type="button"
+                  className={`btn ${bookingMode === 'BLOCK' ? 'btn-primary' : 'btn-secondary'}`}
+                  style={{ flex: 1, padding: '0.45rem', fontSize: '0.8125rem' }}
+                  onClick={() => setBookingMode('BLOCK')}
+                >
+                  🗓️ Date Range / Block (Full Week)
+                </button>
+              </div>
+            )}
+
+            {shiftType === 'ANNUAL_LEAVE' && bookingMode === 'BLOCK' ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="block-start-date">
+                      Start Date
+                    </label>
+                    <input
+                      id="block-start-date"
+                      type="date"
+                      className="form-input"
+                      value={blockStartDate}
+                      onChange={(e) => setBlockStartDate(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="block-end-date">
+                      End Date
+                    </label>
+                    <input
+                      id="block-end-date"
+                      type="date"
+                      className="form-input"
+                      value={blockEndDate}
+                      min={blockStartDate}
+                      onChange={(e) => setBlockEndDate(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Block Deduction Method</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    <label
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.55rem 0.75rem',
+                        borderRadius: 'var(--radius-md)',
+                        border: '1px solid',
+                        borderColor:
+                          blockDeductionType === 'CONTRACTED_WEEK'
+                            ? 'var(--primary)'
+                            : 'var(--border-light)',
+                        background:
+                          blockDeductionType === 'CONTRACTED_WEEK' ? '#eff6ff' : 'var(--surface)',
+                        cursor: 'pointer',
+                        fontSize: '0.8125rem',
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="blockDeductionType"
+                        checked={blockDeductionType === 'CONTRACTED_WEEK'}
+                        onChange={() => setBlockDeductionType('CONTRACTED_WEEK')}
+                      />
+                      <div>
+                        <strong>
+                          Full Contracted Week ({profile?.contractedWeeklyHours || 26.0}h)
+                        </strong>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                          NHS 7-day rule: deducts 1 week of contracted hours (
+                          {(
+                            (blockDaysCount / 7) *
+                            (profile?.contractedWeeklyHours || 26.0)
+                          ).toFixed(1)}
+                          h for {blockDaysCount} days)
+                        </div>
+                      </div>
+                    </label>
+
+                    <label
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.55rem 0.75rem',
+                        borderRadius: 'var(--radius-md)',
+                        border: '1px solid',
+                        borderColor:
+                          blockDeductionType === 'DAILY_PRESET'
+                            ? 'var(--primary)'
+                            : 'var(--border-light)',
+                        background:
+                          blockDeductionType === 'DAILY_PRESET' ? '#eff6ff' : 'var(--surface)',
+                        cursor: 'pointer',
+                        fontSize: '0.8125rem',
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="blockDeductionType"
+                        checked={blockDeductionType === 'DAILY_PRESET'}
+                        onChange={() => setBlockDeductionType('DAILY_PRESET')}
+                      />
+                      <div>
+                        <strong>Daily Shift Preset ({breakdown.totalWorkedHours}h/day)</strong>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                          Deducts {breakdown.totalWorkedHours}h for each of the {blockDaysCount}{' '}
+                          days ({(breakdown.totalWorkedHours * blockDaysCount).toFixed(1)}h total)
+                        </div>
+                      </div>
+                    </label>
+
+                    <label
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.55rem 0.75rem',
+                        borderRadius: 'var(--radius-md)',
+                        border: '1px solid',
+                        borderColor:
+                          blockDeductionType === 'CUSTOM_HOURS'
+                            ? 'var(--primary)'
+                            : 'var(--border-light)',
+                        background:
+                          blockDeductionType === 'CUSTOM_HOURS' ? '#eff6ff' : 'var(--surface)',
+                        cursor: 'pointer',
+                        fontSize: '0.8125rem',
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="blockDeductionType"
+                        checked={blockDeductionType === 'CUSTOM_HOURS'}
+                        onChange={() => setBlockDeductionType('CUSTOM_HOURS')}
+                      />
+                      <div style={{ flex: 1 }}>
+                        <strong>Custom Total Hours for Block</strong>
+                        {blockDeductionType === 'CUSTOM_HOURS' && (
+                          <input
+                            type="number"
+                            step="0.5"
+                            min="0"
+                            className="form-input"
+                            style={{ marginTop: '0.35rem', maxWidth: '140px' }}
+                            value={blockCustomHours}
+                            onChange={(e) => setBlockCustomHours(e.target.value)}
+                          />
+                        )}
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                {blockDeductionType === 'DAILY_PRESET' && (
+                  <ShiftTemplatePicker
+                    presetType={presetType}
+                    presets={ANNUAL_LEAVE_PRESETS}
+                    label="Choose Daily Shift Template"
+                    onSelectPreset={handleSelectPreset}
+                  />
+                )}
+
+                {/* Summary Card */}
+                <div
+                  style={{
+                    background: '#f0fdf4',
+                    border: '1px solid #bbf7d0',
+                    borderRadius: 'var(--radius-md)',
+                    padding: '0.75rem 0.9rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.3rem',
+                    fontSize: '0.8125rem',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      fontWeight: 600,
+                      color: '#166534',
+                    }}
+                  >
+                    <span>Block Duration:</span>
+                    <span>
+                      {blockDaysCount} {blockDaysCount === 1 ? 'day' : 'days'}
+                    </span>
+                  </div>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      fontWeight: 700,
+                      color: '#166534',
+                      fontSize: '0.9rem',
+                    }}
+                  >
+                    <span>Total Hours Deducted:</span>
+                    <span>{blockTotalHours.toFixed(1)} hrs</span>
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: '#15803d', marginTop: '2px' }}>
+                    ✓ Generates a single continuous leave episode matching Allocate HealthRoster.
+                  </div>
+                </div>
+              </div>
             ) : (
-              <ShiftTemplatePicker
-                presetType={presetType}
-                presets={ANNUAL_LEAVE_PRESETS}
-                label="Leave Duration"
-                onSelectPreset={handleSelectPreset}
-              />
+              <>
+                {shiftType !== 'ANNUAL_LEAVE' ? (
+                  <ShiftTemplatePicker
+                    presetType={presetType}
+                    presets={SHIFT_PRESETS}
+                    label="Shift Template"
+                    onSelectPreset={handleSelectPreset}
+                  />
+                ) : (
+                  <ShiftTemplatePicker
+                    presetType={presetType}
+                    presets={ANNUAL_LEAVE_PRESETS}
+                    label="Leave Duration"
+                    onSelectPreset={handleSelectPreset}
+                  />
+                )}
+              </>
             )}
 
             {shiftType !== 'ANNUAL_LEAVE' && unpaidBreakMinutes > 0 && (
@@ -394,7 +735,7 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
               </div>
             )}
 
-            {presetType === 'CUSTOM' && (
+            {bookingMode === 'SINGLE' && presetType === 'CUSTOM' && (
               <ShiftTimeInputs
                 startTime={startTime}
                 endTime={endTime}
@@ -405,26 +746,64 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
             )}
 
             {shiftType === 'ANNUAL_LEAVE' && (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '0.4rem',
-                  padding: '0.55rem 0.75rem',
-                  background: '#f0fdf4',
-                  border: '1px solid #bbf7d0',
-                  borderRadius: 'var(--radius-md)',
-                  fontSize: '0.75rem',
-                  color: '#166534',
-                  lineHeight: 1.4,
-                }}
-              >
-                <Info size={14} style={{ marginTop: '2px', flexShrink: 0 }} />
-                <span>
-                  <strong>NHS AfC Leave Rule:</strong> 1 full day of leave ={' '}
-                  <strong>7.5 hours</strong> (half day = <strong>3.75 hours</strong>). Regular
-                  non-working <strong>Days Off (DO)</strong> do not need to be booked as leave.
-                </span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                <div className="form-group">
+                  <label className="form-label">Approval Status</label>
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(3, 1fr)',
+                      gap: '0.4rem',
+                    }}
+                  >
+                    <button
+                      type="button"
+                      className={`btn ${shiftStatus === 'APPROVED' ? 'btn-primary' : 'btn-secondary'}`}
+                      style={{ fontSize: '0.8125rem', padding: '0.4rem' }}
+                      onClick={() => setShiftStatus('APPROVED')}
+                    >
+                      Approved
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn ${shiftStatus === 'REQUESTED' ? 'btn-primary' : 'btn-secondary'}`}
+                      style={{ fontSize: '0.8125rem', padding: '0.4rem' }}
+                      onClick={() => setShiftStatus('REQUESTED')}
+                    >
+                      Requested
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn ${shiftStatus === 'REJECTED' ? 'btn-danger' : 'btn-secondary'}`}
+                      style={{ fontSize: '0.8125rem', padding: '0.4rem' }}
+                      onClick={() => setShiftStatus('REJECTED')}
+                    >
+                      Rejected
+                    </button>
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '0.45rem',
+                    padding: '0.65rem 0.85rem',
+                    background: '#f0fdf4',
+                    border: '1px solid #bbf7d0',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: '0.78rem',
+                    color: '#166534',
+                    lineHeight: 1.45,
+                  }}
+                >
+                  <Info size={15} style={{ marginTop: '2px', flexShrink: 0 }} />
+                  <span>
+                    <strong>NHS AfC Shift Deduction Rule:</strong> Annual leave is deducted as the
+                    exact net hours of your rostered shift (e.g. 10.0h Night Duty, 11.0h Long Day,
+                    or 7.5h Standard Day) from your 192.5h pot. Unpaid meal breaks are excluded.
+                  </span>
+                </div>
               </div>
             )}
 
@@ -441,23 +820,25 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
               />
             )}
 
-            <ShiftBreakdownPreview
-              shiftType={shiftType}
-              overrideBand={overrideBand}
-              effectiveRate={effectiveRate}
-              breakdown={breakdown}
-              bandConfig={bandConfig}
-              payslipImpact={payslipImpact}
-            />
+            {bookingMode === 'SINGLE' && (
+              <ShiftBreakdownPreview
+                shiftType={shiftType}
+                overrideBand={overrideBand}
+                effectiveRate={effectiveRate}
+                breakdown={breakdown}
+                bandConfig={bandConfig}
+                payslipImpact={payslipImpact}
+              />
+            )}
           </div>
 
           <div className="modal-footer">
-            {initialShift && onDelete ? (
+            {isEditing && onDelete ? (
               <button
                 type="button"
                 className="btn btn-danger"
                 onClick={() => {
-                  onDelete(initialShift.id);
+                  if (initialShift) onDelete(initialShift.id);
                   onClose();
                 }}
               >

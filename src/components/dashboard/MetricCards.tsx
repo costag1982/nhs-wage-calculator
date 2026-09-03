@@ -5,9 +5,10 @@ import { Banknote, Clock, ShieldAlert, Sparkles, Timer } from 'lucide-react';
 
 interface MetricCardsProps {
   summary: PayslipSummary;
+  onLeaveClick?: () => void;
 }
 
-export const MetricCards: React.FC<MetricCardsProps> = ({ summary }) => {
+export const MetricCards: React.FC<MetricCardsProps> = ({ summary, onLeaveClick }) => {
   const formatCurrency = (val: number) =>
     `£${val.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -129,16 +130,28 @@ export const MetricCards: React.FC<MetricCardsProps> = ({ summary }) => {
             </span>
           )}
           {summary.annualLeaveHours !== undefined && summary.annualLeaveHours > 0 && (
-            <span
+            <button
+              type="button"
+              onClick={onLeaveClick}
               style={{
-                display: 'block',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
                 color: 'var(--emerald)',
-                marginTop: '2px',
+                marginTop: '4px',
                 fontWeight: 600,
+                background: '#ecfdf5',
+                border: '1px solid #a7f3d0',
+                borderRadius: 'var(--radius-sm)',
+                padding: '2px 8px',
+                fontSize: '0.78rem',
+                cursor: onLeaveClick ? 'pointer' : 'default',
+                textDecoration: 'none',
               }}
+              title="View Annual Leave Entitlement & Tracker"
             >
               🌴 {formatHours(summary.annualLeaveHours)}h Annual Leave taken this month
-            </span>
+            </button>
           )}
         </div>
       </div>

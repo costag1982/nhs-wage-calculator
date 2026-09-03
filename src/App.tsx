@@ -12,6 +12,7 @@ import { SyncBadge } from './components/dashboard/SyncBadge';
 import { useCloudSync } from './hooks/useCloudSync';
 import { Shift } from './domain/models/Shift';
 import { PayPeriodsView } from './components/periods/PayPeriodsView';
+import { LeaveTrackerView } from './components/leave/LeaveTrackerView';
 import {
   Calendar as CalendarIcon,
   List,
@@ -22,9 +23,10 @@ import {
   RotateCcw,
   LogOut,
   TrendingUp,
+  Palmtree,
 } from 'lucide-react';
 
-export type TabView = 'CALENDAR' | 'LIST' | 'PERIODS' | 'ALL_SHIFTS' | 'PAYSLIP';
+export type TabView = 'CALENDAR' | 'LIST' | 'PERIODS' | 'ALL_SHIFTS' | 'PAYSLIP' | 'LEAVE';
 
 const STORAGE_KEY_ACTIVE_MONTH = 'nhs_active_month';
 const STORAGE_KEY_ACTIVE_TAB = 'nhs_active_tab';
@@ -63,7 +65,8 @@ const normalizeTabParam = (param: string | null): TabView | null => {
     upper === 'LIST' ||
     upper === 'PERIODS' ||
     upper === 'ALL_SHIFTS' ||
-    upper === 'PAYSLIP'
+    upper === 'PAYSLIP' ||
+    upper === 'LEAVE'
   ) {
     return upper as TabView;
   }
@@ -159,6 +162,7 @@ export const App: React.FC = () => {
     allShifts,
     monthShifts,
     addShift,
+    addShiftsBatch,
     updateShift,
     deleteShift,
     clearMonthShifts,
@@ -204,12 +208,24 @@ export const App: React.FC = () => {
   }, [profile, allShifts, commitments, activeMonthDate]);
 
   // Handlers for shift modal
-  const handleOpenAddShift = (dateStr?: string) => {
+  const handleOpenAddShift = (dateStr?: string, defaultShiftType?: Shift['shiftType']) => {
     const targetDate =
       dateStr ||
       `${activeMonthDate.getFullYear()}-${String(activeMonthDate.getMonth() + 1).padStart(2, '0')}-01`;
     setModalSelectedDate(targetDate);
-    setEditingShift(null);
+    if (defaultShiftType) {
+      setEditingShift({
+        id: '',
+        date: targetDate,
+        startTime: defaultShiftType === 'ANNUAL_LEAVE' ? '20:00' : '08:00',
+        endTime: defaultShiftType === 'ANNUAL_LEAVE' ? '06:00' : '16:00',
+        unpaidBreakMinutes: 0,
+        shiftType: defaultShiftType,
+        presetType: defaultShiftType === 'ANNUAL_LEAVE' ? 'ANNUAL_LEAVE_NIGHT' : 'CUSTOM',
+      } as Shift);
+    } else {
+      setEditingShift(null);
+    }
     setIsShiftModalOpen(true);
   };
 
@@ -220,7 +236,7 @@ export const App: React.FC = () => {
   };
 
   const handleSaveShift = (shiftData: Omit<Shift, 'id' | 'breakdown'>) => {
-    if (editingShift) {
+    if (editingShift && editingShift.id) {
       updateShift(editingShift.id, shiftData);
     } else {
       addShift(shiftData);
@@ -325,13 +341,19 @@ export const App: React.FC = () => {
         </div>
       </header>
 
-      {/* Main KPI Metric Cards (shown on Monthly Roster, Month Shifts, and Payslip) */}
-      {(activeTab === 'CALENDAR' || activeTab === 'LIST' || activeTab === 'PAYSLIP') && (
-        <MetricCards summary={payslipSummary} />
+      {/* Main KPI Metric Cards (shown on Monthly Roster, Month Shifts, Payslip, and Leave) */}
+      {(activeTab === 'CALENDAR' ||
+        activeTab === 'LIST' ||
+        activeTab === 'PAYSLIP' ||
+        activeTab === 'LEAVE') && (
+        <MetricCards summary={payslipSummary} onLeaveClick={() => setActiveTab('LEAVE')} />
       )}
 
       {/* View Switcher Tabs & Period Summary Controls (for active month) */}
-      {(activeTab === 'CALENDAR' || activeTab === 'LIST' || activeTab === 'PAYSLIP') && (
+      {(activeTab === 'CALENDAR' ||
+        activeTab === 'LIST' ||
+        activeTab === 'PAYSLIP' ||
+        activeTab === 'LEAVE') && (
         <div className="view-tabs-container">
           <div className="view-tabs">
             <button
@@ -349,6 +371,14 @@ export const App: React.FC = () => {
             >
               <List size={16} />
               Month Shifts ({monthShifts.length})
+            </button>
+            <button
+              type="button"
+              className={`tab-btn ${activeTab === 'LEAVE' ? 'active' : ''}`}
+              onClick={() => setActiveTab('LEAVE')}
+            >
+              <Palmtree size={16} />
+              Annual Leave
             </button>
             <button
               type="button"
@@ -427,6 +457,17 @@ export const App: React.FC = () => {
         )}
 
         {activeTab === 'PAYSLIP' && <EsrPayslip profile={profile} summary={payslipSummary} />}
+
+        {activeTab === 'LEAVE' && (
+          <LeaveTrackerView
+            profile={profile}
+            shifts={allShifts}
+            activeMonthDate={activeMonthDate}
+            onBookLeaveClick={() => handleOpenAddShift(undefined, 'ANNUAL_LEAVE')}
+            onEditShift={handleOpenEditShift}
+            onOpenSettings={() => setIsSettingsOpen(true)}
+          />
+        )}
       </main>
 
       {/* Shift Edit / Add Modal */}
@@ -440,6 +481,7 @@ export const App: React.FC = () => {
         defaultProfileBand={profile.band}
         onClose={() => setIsShiftModalOpen(false)}
         onSave={handleSaveShift}
+        onSaveBatch={addShiftsBatch}
         onDelete={deleteShift}
       />
 

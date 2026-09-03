@@ -29,6 +29,7 @@ export interface EmployeeProfile {
   customHourlyRate?: number; // If override specified
   yearsOfServiceTier?: NhsServiceYearsTier; // NHS continuous service tier for AfC Section 13 annual leave
   annualLeaveCarryOverHours?: number; // Hours carried forward from previous leave year
+  annualLeaveBaseHoursOverride?: number; // Exact base entitlement override in hours (e.g. 192.5)
   taxCode: string; // e.g. "1257L CUMUL", "BR"
   niCategory: string; // e.g. "A"
   pensionContributionRate: number; // e.g. 0.065 (6.5%)

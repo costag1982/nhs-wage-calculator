@@ -92,6 +92,48 @@ export const useRoster = (
     [onMutation, shiftsUseCase]
   );
 
+  const addShiftsBatch = useCallback(
+    (shiftsData: Omit<Shift, 'id' | 'breakdown'>[]) => {
+      setAllShifts((prev) => {
+        const updated = [...prev];
+        const toPersist: Shift[] = [];
+
+        for (const data of shiftsData) {
+          const existingIndex = updated.findIndex((s) => s.date === data.date);
+          const shiftId =
+            existingIndex !== -1
+              ? updated[existingIndex].id
+              : typeof crypto !== 'undefined' && crypto.randomUUID
+                ? crypto.randomUUID()
+                : `shift-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+
+          const newShift: Shift = {
+            ...data,
+            id: shiftId,
+            breakdown: calculateShiftBreakdown({
+              ...data,
+              id: shiftId,
+            }),
+          };
+
+          if (existingIndex !== -1) {
+            updated[existingIndex] = newShift;
+          } else {
+            updated.push(newShift);
+          }
+          toPersist.push(newShift);
+        }
+
+        Promise.all(toPersist.map((s) => shiftsUseCase.saveShift(s))).catch((err) => {
+          console.error('Failed to save shifts batch to SQLite', err);
+        });
+        onMutation?.();
+        return updated;
+      });
+    },
+    [onMutation, shiftsUseCase]
+  );
+
   const updateShift = useCallback(
     (id: string, updatedData: Partial<Shift>) => {
       setAllShifts((prev) =>
@@ -163,6 +205,7 @@ export const useRoster = (
     monthShifts,
     isShiftsLoaded,
     addShift,
+    addShiftsBatch,
     updateShift,
     deleteShift,
     clearMonthShifts,
