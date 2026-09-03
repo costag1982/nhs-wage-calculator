@@ -23,6 +23,15 @@ export const ShiftBreakdownPreview: React.FC<ShiftBreakdownPreviewProps> = ({
 }) => {
   // Annual Leave View
   if (shiftType === 'ANNUAL_LEAVE') {
+    const hours = Math.floor(breakdown.totalWorkedHours);
+    const mins = Math.round((breakdown.totalWorkedHours - hours) * 60);
+    const formattedDuration =
+      hours > 0 && mins > 0
+        ? `${hours} hrs ${mins} mins`
+        : hours > 0
+          ? `${hours} ${hours === 1 ? 'hr' : 'hrs'}`
+          : `${mins} mins`;
+
     return (
       <div className="breakdown-receipt">
         <div className="breakdown-receipt-header">
@@ -33,11 +42,13 @@ export const ShiftBreakdownPreview: React.FC<ShiftBreakdownPreviewProps> = ({
             />
             Annual Leave (AfC Section 13)
           </span>
-          <span className="breakdown-tag leave-tag">{breakdown.totalWorkedHours}h Leave</span>
+          <span className="breakdown-tag leave-tag">{formattedDuration}</span>
         </div>
         <div className="breakdown-receipt-row">
-          <span>Leave Hours Deducted from Pot</span>
-          <span className="tabular-nums font-bold">{breakdown.totalWorkedHours} hrs</span>
+          <span>Leave Deducted from Pot</span>
+          <span className="tabular-nums font-bold">
+            {formattedDuration} ({breakdown.totalWorkedHours}h)
+          </span>
         </div>
         <div className="breakdown-receipt-total leave-total">
           <span>Gross Pay Impact</span>

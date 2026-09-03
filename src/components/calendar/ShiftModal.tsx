@@ -20,7 +20,8 @@ import { ShiftTemplatePicker } from './shift-modal/ShiftTemplatePicker';
 import { ShiftTimeInputs } from './shift-modal/ShiftTimeInputs';
 import { ShiftBandSelector } from './shift-modal/ShiftBandSelector';
 import { ShiftBreakdownPreview } from './shift-modal/ShiftBreakdownPreview';
-import { SHIFT_PRESETS, ANNUAL_LEAVE_PRESETS } from './shift-modal/shiftModalConstants';
+import { LeaveDurationSelector } from './shift-modal/LeaveDurationSelector';
+import { SHIFT_PRESETS } from './shift-modal/shiftModalConstants';
 import { formatEpisodeDateRange } from '../../domain/services/annualLeaveCalculator';
 import { X, Trash2, Check, Sparkles, AlertTriangle, Info } from 'lucide-react';
 
@@ -115,12 +116,33 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
     return existingShifts.find((s) => s.date === selectedDate && s.id !== initialShift?.id) || null;
   }, [existingShifts, selectedDate, initialShift]);
 
+  const initialLeaveDuration = useMemo(() => {
+    if (initialShift?.shiftType === 'ANNUAL_LEAVE') {
+      const total =
+        initialShift.breakdown?.totalWorkedHours ??
+        calculateShiftBreakdown(initialShift).totalWorkedHours;
+      const h = Math.floor(total);
+      const m = Math.round((total - h) * 60);
+      return { hours: h, minutes: m };
+    }
+    return { hours: 7, minutes: 30 };
+  }, [initialShift]);
+
+  const [leaveHours, setLeaveHours] = useState<number>(initialLeaveDuration.hours);
+  const [leaveMinutes, setLeaveMinutes] = useState<number>(initialLeaveDuration.minutes);
+
   const endTimeError = useMemo(() => {
+    if (shiftType === 'ANNUAL_LEAVE') {
+      if (leaveHours === 0 && leaveMinutes === 0) {
+        return 'Please select a leave duration greater than 0 hours.';
+      }
+      return null;
+    }
     if (startTime && endTime && startTime === endTime) {
       return 'Finish time cannot be the same as start time.';
     }
     return null;
-  }, [startTime, endTime]);
+  }, [shiftType, leaveHours, leaveMinutes, startTime, endTime]);
 
   const handleSelectPreset = (preset: ShiftPreset) => {
     setPresetType(preset.id);
@@ -131,10 +153,24 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
     }
   };
 
+  const handleChangeLeaveDuration = (h: number, m: number) => {
+    setLeaveHours(h);
+    setLeaveMinutes(m);
+    setPresetType('CUSTOM');
+    const totalMinutes = h * 60 + m;
+    const endHour = 8 + Math.floor(totalMinutes / 60);
+    const endMin = totalMinutes % 60;
+    setStartTime('08:00');
+    setEndTime(`${String(endHour).padStart(2, '0')}:${String(endMin).padStart(2, '0')}`);
+    setUnpaidBreakMinutes(0);
+  };
+
   const handleSwitchShiftType = (newType: ShiftWorkType) => {
     setShiftType(newType);
     if (newType === 'ANNUAL_LEAVE') {
-      setPresetType('ANNUAL_LEAVE_FULL');
+      setPresetType('CUSTOM');
+      setLeaveHours(7);
+      setLeaveMinutes(30);
       setStartTime('08:00');
       setEndTime('15:30');
       setUnpaidBreakMinutes(0);
@@ -148,6 +184,21 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
   };
 
   const breakdown = useMemo(() => {
+    if (shiftType === 'ANNUAL_LEAVE') {
+      const totalMinutes = leaveHours * 60 + leaveMinutes;
+      const endHour = 8 + Math.floor(totalMinutes / 60);
+      const endMin = totalMinutes % 60;
+      const computedEndTime = `${String(endHour).padStart(2, '0')}:${String(endMin).padStart(2, '0')}`;
+      return calculateShiftBreakdown({
+        id: 'preview',
+        date: selectedDate,
+        startTime: '08:00',
+        endTime: computedEndTime,
+        unpaidBreakMinutes: 0,
+        shiftType: 'ANNUAL_LEAVE',
+      });
+    }
+
     return calculateShiftBreakdown({
       id: 'preview',
       date: selectedDate,
@@ -157,7 +208,16 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
       unpaidBreakStartTime: unpaidBreakStartTime || undefined,
       shiftType,
     });
-  }, [selectedDate, startTime, endTime, unpaidBreakMinutes, unpaidBreakStartTime, shiftType]);
+  }, [
+    shiftType,
+    leaveHours,
+    leaveMinutes,
+    selectedDate,
+    startTime,
+    endTime,
+    unpaidBreakMinutes,
+    unpaidBreakStartTime,
+  ]);
 
   const blockDaysCount = useMemo(() => {
     if (!blockStartDate || !blockEndDate) return 1;
@@ -293,6 +353,25 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
       return;
     }
 
+    if (shiftType === 'ANNUAL_LEAVE' && bookingMode === 'SINGLE') {
+      const totalMinutes = leaveHours * 60 + leaveMinutes;
+      const endHour = 8 + Math.floor(totalMinutes / 60);
+      const endMin = totalMinutes % 60;
+      const formattedEndTime = `${String(endHour).padStart(2, '0')}:${String(endMin).padStart(2, '0')}`;
+
+      onSave({
+        date: selectedDate,
+        startTime: '08:00',
+        endTime: formattedEndTime,
+        unpaidBreakMinutes: 0,
+        presetType,
+        shiftType: 'ANNUAL_LEAVE',
+        status: shiftStatus,
+      });
+      onClose();
+      return;
+    }
+
     onSave({
       date: selectedDate,
       startTime,
@@ -329,14 +408,21 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
         ? 'Replace Shift'
         : 'Add Shift';
 
+  const leaveSummaryFormatted = useMemo(() => {
+    if (leaveHours > 0 && leaveMinutes > 0) {
+      return `${leaveHours}h ${leaveMinutes}m`;
+    }
+    return leaveHours > 0 ? `${leaveHours}h` : `${leaveMinutes}m`;
+  }, [leaveHours, leaveMinutes]);
+
   const saveButtonLabel = isEditing
     ? shiftType === 'ANNUAL_LEAVE'
-      ? 'Update Leave'
+      ? `Update Leave (${leaveSummaryFormatted})`
       : 'Update Shift'
     : shiftType === 'ANNUAL_LEAVE'
       ? bookingMode === 'BLOCK'
         ? `Book Block Leave (${blockTotalHours.toFixed(1)}h)`
-        : 'Book Leave'
+        : `Book Leave (${leaveSummaryFormatted})`
       : conflictingShift
         ? 'Replace & Save'
         : 'Save Shift';
@@ -538,7 +624,7 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
                         onChange={() => setBlockDeductionType('DAILY_PRESET')}
                       />
                       <div>
-                        <strong>Daily Shift Preset ({breakdown.totalWorkedHours}h/day)</strong>
+                        <strong>Daily Shift Duration ({breakdown.totalWorkedHours}h/day)</strong>
                         <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
                           Deducts {breakdown.totalWorkedHours}h for each of the {blockDaysCount}{' '}
                           days ({(breakdown.totalWorkedHours * blockDaysCount).toFixed(1)}h total)
@@ -589,11 +675,10 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
                 </div>
 
                 {blockDeductionType === 'DAILY_PRESET' && (
-                  <ShiftTemplatePicker
-                    presetType={presetType}
-                    presets={ANNUAL_LEAVE_PRESETS}
-                    label="Choose Daily Shift Template"
-                    onSelectPreset={handleSelectPreset}
+                  <LeaveDurationSelector
+                    hours={leaveHours}
+                    minutes={leaveMinutes}
+                    onChangeDuration={handleChangeLeaveDuration}
                   />
                 )}
 
@@ -640,24 +725,19 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
                   </div>
                 </div>
               </div>
+            ) : shiftType === 'ANNUAL_LEAVE' ? (
+              <LeaveDurationSelector
+                hours={leaveHours}
+                minutes={leaveMinutes}
+                onChangeDuration={handleChangeLeaveDuration}
+              />
             ) : (
-              <>
-                {shiftType !== 'ANNUAL_LEAVE' ? (
-                  <ShiftTemplatePicker
-                    presetType={presetType}
-                    presets={SHIFT_PRESETS}
-                    label="Shift Template"
-                    onSelectPreset={handleSelectPreset}
-                  />
-                ) : (
-                  <ShiftTemplatePicker
-                    presetType={presetType}
-                    presets={ANNUAL_LEAVE_PRESETS}
-                    label="Leave Duration"
-                    onSelectPreset={handleSelectPreset}
-                  />
-                )}
-              </>
+              <ShiftTemplatePicker
+                presetType={presetType}
+                presets={SHIFT_PRESETS}
+                label="Shift Template"
+                onSelectPreset={handleSelectPreset}
+              />
             )}
 
             {shiftType !== 'ANNUAL_LEAVE' && unpaidBreakMinutes > 0 && (
@@ -735,15 +815,17 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
               </div>
             )}
 
-            {bookingMode === 'SINGLE' && presetType === 'CUSTOM' && (
-              <ShiftTimeInputs
-                startTime={startTime}
-                endTime={endTime}
-                endTimeError={endTimeError}
-                onStartTimeChange={setStartTime}
-                onEndTimeChange={setEndTime}
-              />
-            )}
+            {bookingMode === 'SINGLE' &&
+              shiftType !== 'ANNUAL_LEAVE' &&
+              presetType === 'CUSTOM' && (
+                <ShiftTimeInputs
+                  startTime={startTime}
+                  endTime={endTime}
+                  endTimeError={endTimeError}
+                  onStartTimeChange={setStartTime}
+                  onEndTimeChange={setEndTime}
+                />
+              )}
 
             {shiftType === 'ANNUAL_LEAVE' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
