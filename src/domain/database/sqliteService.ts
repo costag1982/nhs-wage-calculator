@@ -466,7 +466,7 @@ export const exportFullDataPayload = async (): Promise<{
     getAllShifts(),
   ]);
 
-  const lastModified = localStorage.getItem('nhs_last_local_mutation') || new Date().toISOString();
+  const lastModified = localStorage.getItem('nhs_last_local_mutation') || new Date(0).toISOString();
 
   return {
     version: 1,

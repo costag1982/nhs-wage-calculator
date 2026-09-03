@@ -215,4 +215,58 @@ describe('cloudSyncService', () => {
     expect(result.action).toBe('PULLED_REMOTE');
     expect(result.payload?.shifts.length).toBe(DEFAULT_GEMMA_JUNE_SHIFTS.length);
   });
+
+  it('pulls remote payload on fresh client when no local mutations have ever occurred (e.g. incognito or new device)', async () => {
+    saveSyncConfig('ghp_token', 'gist123');
+
+    // Ensure NO local mutation has occurred (fresh client / incognito)
+    expect(localStorage.getItem('nhs_last_local_mutation')).toBeNull();
+
+    vi.spyOn(sqliteService, 'exportFullDataPayload').mockResolvedValue({
+      version: 1,
+      lastModified: new Date(0).toISOString(),
+      profile: DEFAULT_GEMMA_PROFILE,
+      commitments: DEFAULT_GEMMA_COMMITMENTS,
+      shifts: DEFAULT_GEMMA_JUNE_SHIFTS,
+    });
+    vi.spyOn(sqliteService, 'importFullDataPayload').mockResolvedValue();
+
+    const remoteWithCustomShifts: SyncPayload = {
+      version: 1,
+      lastModified: new Date('2026-08-31T12:00:00Z').toISOString(),
+      profile: DEFAULT_GEMMA_PROFILE,
+      commitments: DEFAULT_GEMMA_COMMITMENTS,
+      shifts: [
+        ...DEFAULT_GEMMA_JUNE_SHIFTS,
+        {
+          id: 'custom-shift-august',
+          date: '2026-08-15',
+          startTime: '08:00',
+          endTime: '15:30',
+          unpaidBreakMinutes: 0,
+          shiftType: 'SUBSTANTIVE',
+        },
+      ],
+    };
+
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        files: {
+          'nhs-wage-calculator-data.json': {
+            content: JSON.stringify(remoteWithCustomShifts),
+          },
+        },
+      }),
+    });
+
+    vi.stubGlobal('fetch', mockFetch);
+
+    const result = await executeSync();
+    expect(result.status).toBe('synced');
+    expect(result.action).toBe('PULLED_REMOTE');
+    expect(result.payload?.shifts.length).toBe(DEFAULT_GEMMA_JUNE_SHIFTS.length + 1);
+    expect(sqliteService.importFullDataPayload).toHaveBeenCalledWith(remoteWithCustomShifts);
+  });
 });

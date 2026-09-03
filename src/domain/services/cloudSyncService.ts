@@ -311,6 +311,25 @@ export const executeSync = async (): Promise<SyncResult> => {
       };
     }
 
+    const hasLocalMutation = Boolean(
+      typeof window !== 'undefined' && localStorage.getItem(STORAGE_KEY_LAST_LOCAL_MUTATION)
+    );
+
+    // Safeguard against overwriting remote data from fresh/clean sessions:
+    // If this client has never recorded any local user mutations (e.g. incognito, new device,
+    // cleared storage), NEVER overwrite remote data with initial seed defaults. Always pull remote.
+    if (!hasLocalMutation) {
+      await importFullDataPayload(remoteData);
+      const nowIso = new Date().toISOString();
+      localStorage.setItem(STORAGE_KEY_LAST_SYNCED, nowIso);
+      return {
+        status: 'synced',
+        action: 'PULLED_REMOTE',
+        payload: remoteData,
+        lastSyncedAt: nowIso,
+      };
+    }
+
     const remoteModifiedTime = new Date(remoteData.lastModified || 0).getTime();
 
     // Case 1: Remote is newer than local (e.g. Gemma updated shifts on another device)
