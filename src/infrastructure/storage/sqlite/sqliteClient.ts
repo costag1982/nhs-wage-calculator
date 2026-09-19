@@ -66,8 +66,9 @@ export const saveProfileSync = (db: Database, profile: EmployeeProfile): void =>
       full_time_salary_fte, standard_full_time_hours, contracted_weekly_hours,
       custom_hourly_rate, tax_code, ni_category, pension_contribution_rate,
       tax_office_name, tax_office_ref, ni_number, employee_number, pay_method,
-      years_of_service_tier, al_carry_over_hours, afc_absence_hourly_rate, al_base_hours_override
-    ) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      years_of_service_tier, al_carry_over_hours, afc_absence_hourly_rate, al_base_hours_override,
+      al_in_lieu_hours, al_continuous_service_hours, al_adjustment_hours
+    ) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       profile.employeeName,
       profile.jobTitle,
@@ -91,6 +92,9 @@ export const saveProfileSync = (db: Database, profile: EmployeeProfile): void =>
       profile.annualLeaveCarryOverHours || 0,
       profile.afcAbsenceHourlyRateOverride ?? null,
       profile.annualLeaveBaseHoursOverride ?? null,
+      profile.annualLeaveInLieuHours || 0,
+      profile.annualLeaveContinuousServiceHours || 0,
+      profile.annualLeaveAdjustmentHours || 0,
     ]
   );
 };
@@ -138,7 +142,14 @@ export const initializeSchema = (db: Database): void => {
       tax_office_ref TEXT,
       ni_number TEXT,
       employee_number TEXT,
-      pay_method TEXT
+      pay_method TEXT,
+      years_of_service_tier TEXT DEFAULT 'UNDER_5',
+      al_carry_over_hours REAL DEFAULT 0,
+      afc_absence_hourly_rate REAL,
+      al_base_hours_override REAL,
+      al_in_lieu_hours REAL DEFAULT 0,
+      al_continuous_service_hours REAL DEFAULT 0,
+      al_adjustment_hours REAL DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS recurring_commitments (
@@ -202,6 +213,21 @@ export const initializeSchema = (db: Database): void => {
   }
   try {
     db.run('ALTER TABLE employee_profile ADD COLUMN al_base_hours_override REAL');
+  } catch {
+    // Column already exists
+  }
+  try {
+    db.run('ALTER TABLE employee_profile ADD COLUMN al_in_lieu_hours REAL DEFAULT 0');
+  } catch {
+    // Column already exists
+  }
+  try {
+    db.run('ALTER TABLE employee_profile ADD COLUMN al_continuous_service_hours REAL DEFAULT 0');
+  } catch {
+    // Column already exists
+  }
+  try {
+    db.run('ALTER TABLE employee_profile ADD COLUMN al_adjustment_hours REAL DEFAULT 0');
   } catch {
     // Column already exists
   }

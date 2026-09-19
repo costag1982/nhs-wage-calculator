@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useContractSettings } from './hooks/useContractSettings';
 import { useRoster } from './hooks/useRoster';
 import { calculatePayslipHistory } from './domain/services/wageCalculatorService';
+import { calculateAnnualLeaveBalance } from './domain/services/annualLeaveCalculator';
 import { MetricCards } from './components/dashboard/MetricCards';
 import { CalendarView } from './components/calendar/CalendarView';
 import { ShiftListView } from './components/dashboard/ShiftListView';
@@ -207,6 +208,10 @@ export const App: React.FC = () => {
     return calculatePayslipHistory(profile, allShifts, commitments, activeMonthDate);
   }, [profile, allShifts, commitments, activeMonthDate]);
 
+  const annualLeaveSummary = useMemo(() => {
+    return calculateAnnualLeaveBalance(profile, allShifts, activeMonthDate);
+  }, [profile, allShifts, activeMonthDate]);
+
   // Handlers for shift modal
   const handleOpenAddShift = (dateStr?: string, defaultShiftType?: Shift['shiftType']) => {
     const targetDate =
@@ -320,6 +325,16 @@ export const App: React.FC = () => {
 
           <button
             type="button"
+            className={`btn ${activeTab === 'LEAVE' ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => setActiveTab(activeTab === 'LEAVE' ? 'CALENDAR' : 'LEAVE')}
+            title="View Annual Leave Entitlement vs Taken (Allocate HealthRoster)"
+          >
+            <Palmtree size={16} />
+            Leave ({annualLeaveSummary.remainingHours}h left)
+          </button>
+
+          <button
+            type="button"
             className="btn btn-secondary"
             onClick={() => setIsSettingsOpen(true)}
             title="Configure Band, salary, contracted hours & deductions"
@@ -341,12 +356,13 @@ export const App: React.FC = () => {
         </div>
       </header>
 
-      {/* Main KPI Metric Cards (shown on Monthly Roster, Month Shifts, Payslip, and Leave) */}
-      {(activeTab === 'CALENDAR' ||
-        activeTab === 'LIST' ||
-        activeTab === 'PAYSLIP' ||
-        activeTab === 'LEAVE') && (
-        <MetricCards summary={payslipSummary} onLeaveClick={() => setActiveTab('LEAVE')} />
+      {/* Main KPI Metric Cards (shown on Monthly Roster, Month Shifts, and Payslip) */}
+      {(activeTab === 'CALENDAR' || activeTab === 'LIST' || activeTab === 'PAYSLIP') && (
+        <MetricCards
+          summary={payslipSummary}
+          leaveSummary={annualLeaveSummary}
+          onLeaveClick={() => setActiveTab('LEAVE')}
+        />
       )}
 
       {/* View Switcher Tabs & Period Summary Controls (for active month) */}
@@ -464,8 +480,10 @@ export const App: React.FC = () => {
             shifts={allShifts}
             activeMonthDate={activeMonthDate}
             onBookLeaveClick={() => handleOpenAddShift(undefined, 'ANNUAL_LEAVE')}
+            onBack={() => setActiveTab('CALENDAR')}
             onEditShift={handleOpenEditShift}
             onOpenSettings={() => setIsSettingsOpen(true)}
+            onUpdateProfile={updateProfile}
           />
         )}
       </main>

@@ -29,7 +29,10 @@ export interface EmployeeProfile {
   customHourlyRate?: number; // If override specified
   yearsOfServiceTier?: NhsServiceYearsTier; // NHS continuous service tier for AfC Section 13 annual leave
   annualLeaveCarryOverHours?: number; // Hours carried forward from previous leave year
-  annualLeaveBaseHoursOverride?: number; // Exact base entitlement override in hours (e.g. 192.5)
+  annualLeaveBaseHoursOverride?: number; // Exact base entitlement override in hours (e.g. 187.5)
+  annualLeaveInLieuHours?: number; // Time off in lieu (TOIL) hours added to leave pot
+  annualLeaveContinuousServiceHours?: number; // Additional continuous service adjustment hours
+  annualLeaveAdjustmentHours?: number; // Trust adjustment hours
   taxCode: string; // e.g. "1257L CUMUL", "BR"
   niCategory: string; // e.g. "A"
   pensionContributionRate: number; // e.g. 0.065 (6.5%)

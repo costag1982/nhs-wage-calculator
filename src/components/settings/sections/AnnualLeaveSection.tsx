@@ -89,6 +89,62 @@ export const AnnualLeaveSection: React.FC<AnnualLeaveSectionProps> = ({
           </div>
         </div>
 
+        <div className="form-row">
+          <div className="form-group">
+            <label className="form-label" htmlFor="settings-in-lieu">
+              In Lieu (Hours)
+            </label>
+            <input
+              id="settings-in-lieu"
+              type="number"
+              step="0.5"
+              className="form-input"
+              value={profile.annualLeaveInLieuHours || 0}
+              onChange={(e) =>
+                onUpdateProfile({
+                  annualLeaveInLieuHours: parseFloat(e.target.value) || 0,
+                })
+              }
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label" htmlFor="settings-continuous-service">
+              Continuous Service (Hours)
+            </label>
+            <input
+              id="settings-continuous-service"
+              type="number"
+              step="0.5"
+              className="form-input"
+              value={profile.annualLeaveContinuousServiceHours || 0}
+              onChange={(e) =>
+                onUpdateProfile({
+                  annualLeaveContinuousServiceHours: parseFloat(e.target.value) || 0,
+                })
+              }
+            />
+          </div>
+        </div>
+
+        <div className="form-group">
+          <label className="form-label" htmlFor="settings-adjustment">
+            Adjustment Amount (Hours)
+          </label>
+          <input
+            id="settings-adjustment"
+            type="number"
+            step="0.5"
+            className="form-input"
+            value={profile.annualLeaveAdjustmentHours || 0}
+            onChange={(e) =>
+              onUpdateProfile({
+                annualLeaveAdjustmentHours: parseFloat(e.target.value) || 0,
+              })
+            }
+          />
+        </div>
+
         <div className="form-group">
           <label className="form-label">Total Leave Pot</label>
           <div className="form-input-display">

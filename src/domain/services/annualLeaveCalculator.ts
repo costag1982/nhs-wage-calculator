@@ -19,6 +19,9 @@ export interface AnnualLeaveEntitlement {
   annualLeaveHours: number;
   bankHolidayHours: number;
   carryOverHours: number;
+  inLieuHours: number;
+  continuousServiceHours: number;
+  adjustmentHours: number;
   totalEntitlementHours: number;
 }
 
@@ -50,40 +53,51 @@ export interface AnnualLeaveBalanceSummary {
   rejectedEpisodesCount: number;
 }
 
+const UK_MONTH_NAMES = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+] as const;
+
+const parseUtcDate = (isoDateStr: string): Date => {
+  const [year, month, day] = isoDateStr.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day));
+};
+
+const formatUkDatePart = (d: Date): string => {
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  return `${day} ${UK_MONTH_NAMES[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+};
+
 /**
  * Formats a date range into standard UK readable string (e.g. "02 Apr 2026 - 08 Apr 2026").
  */
 export const formatEpisodeDateRange = (startDateStr: string, endDateStr: string): string => {
-  const parse = (str: string) => {
-    const [y, m, d] = str.split('-').map(Number);
-    return new Date(Date.UTC(y, m - 1, d));
-  };
-  const start = parse(startDateStr);
-  const end = parse(endDateStr);
-
-  const formatPart = (d: Date) => {
-    const day = String(d.getUTCDate()).padStart(2, '0');
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    return `${day} ${months[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
-  };
+  const start = parseUtcDate(startDateStr);
+  const end = parseUtcDate(endDateStr);
 
   if (startDateStr === endDateStr) {
-    return formatPart(start);
+    return formatUkDatePart(start);
   }
-  return `${formatPart(start)} - ${formatPart(end)}`;
+  return `${formatUkDatePart(start)} - ${formatUkDatePart(end)}`;
+};
+
+/**
+ * Formats a leave year range matching Allocate HealthRoster header (e.g. "01 Apr 2026-31 Mar 2027").
+ */
+export const formatLeaveYearDisplayRange = (startDateStr: string, endDateStr: string): string => {
+  const start = parseUtcDate(startDateStr);
+  const end = parseUtcDate(endDateStr);
+  return `${formatUkDatePart(start)}-${formatUkDatePart(end)}`;
 };
 
 /**
@@ -134,6 +148,9 @@ export const calculateAnnualLeaveEntitlement = (
   const tierKey = profile.yearsOfServiceTier || 'UNDER_5';
   const tierConfig = NHS_LEAVE_TIERS[tierKey] || NHS_LEAVE_TIERS.UNDER_5;
   const carryOver = profile.annualLeaveCarryOverHours || 0;
+  const inLieu = profile.annualLeaveInLieuHours || 0;
+  const continuousService = profile.annualLeaveContinuousServiceHours || 0;
+  const adjustment = profile.annualLeaveAdjustmentHours || 0;
 
   let baseHours: number;
   let annualLeaveHours: number;
@@ -161,7 +178,9 @@ export const calculateAnnualLeaveEntitlement = (
     baseHours = roundHours(annualLeaveHours + bankHolidayHours);
   }
 
-  const totalEntitlementHours = roundHours(baseHours + carryOver);
+  const totalEntitlementHours = roundHours(
+    baseHours + carryOver + inLieu + continuousService + adjustment
+  );
 
   return {
     tier: tierKey,
@@ -173,6 +192,9 @@ export const calculateAnnualLeaveEntitlement = (
     annualLeaveHours,
     bankHolidayHours,
     carryOverHours: carryOver,
+    inLieuHours: inLieu,
+    continuousServiceHours: continuousService,
+    adjustmentHours: adjustment,
     totalEntitlementHours,
   };
 };
@@ -255,6 +277,65 @@ const createEpisodeFromBatch = (
   };
 };
 
+interface LeaveHoursAggregation {
+  requestedHours: number;
+  totalApprovedInYear: number;
+  pastTakenInYear: number;
+  futureApprovedInYear: number;
+  takenThisMonth: number;
+  leaveShiftsInYear: Shift[];
+}
+
+const aggregateLeaveHours = (
+  allShifts: Shift[],
+  startDateIso: string,
+  endDateIso: string,
+  cutoffIsoDate: string,
+  monthPrefix: string
+): LeaveHoursAggregation => {
+  let requestedHours = 0;
+  let totalApprovedInYear = 0;
+  let pastTakenInYear = 0;
+  let futureApprovedInYear = 0;
+  let takenThisMonth = 0;
+  const leaveShiftsInYear: Shift[] = [];
+
+  for (const shift of allShifts) {
+    if (shift.shiftType !== 'ANNUAL_LEAVE') continue;
+    if (shift.date < startDateIso || shift.date > endDateIso) continue;
+
+    leaveShiftsInYear.push(shift);
+    if (shift.status === 'REJECTED') continue;
+
+    const breakdown = shift.breakdown || calculateShiftBreakdown(shift);
+    const duration = breakdown.totalWorkedHours;
+
+    if (shift.status === 'REQUESTED') {
+      requestedHours += duration;
+    } else {
+      totalApprovedInYear += duration;
+      if (shift.date <= cutoffIsoDate) {
+        pastTakenInYear += duration;
+      } else {
+        futureApprovedInYear += duration;
+      }
+    }
+
+    if (shift.date.startsWith(monthPrefix) && shift.status !== 'REQUESTED') {
+      takenThisMonth += duration;
+    }
+  }
+
+  return {
+    requestedHours,
+    totalApprovedInYear,
+    pastTakenInYear,
+    futureApprovedInYear,
+    takenThisMonth,
+    leaveShiftsInYear,
+  };
+};
+
 /**
  * Calculates the full leave balance (taken vs approved vs requested vs remaining)
  * for the NHS leave year containing referenceDate.
@@ -262,7 +343,7 @@ const createEpisodeFromBatch = (
 export const calculateAnnualLeaveBalance = (
   profile: EmployeeProfile,
   allShifts: Shift[],
-  referenceDate: Date
+  referenceDate: Date = new Date()
 ): AnnualLeaveBalanceSummary => {
   const entitlement = calculateAnnualLeaveEntitlement(profile);
   const leaveYear = getNhsLeaveYearRange(referenceDate);
@@ -276,47 +357,20 @@ export const calculateAnnualLeaveBalance = (
   const leaveYearEndDate = new Date(`${leaveYear.endDateIso}T23:59:59`);
   const countdownText = calculateLeaveYearCountdown(referenceDate, leaveYearEndDate);
 
-  const today = new Date();
-  const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-
-  let totalApprovedInYear = 0;
-  let pastTakenInYear = 0;
-  let futureApprovedInYear = 0;
-  let takenThisMonth = 0;
-  let requestedHours = 0;
-
-  const leaveShiftsInYear: Shift[] = [];
-
-  for (const shift of allShifts) {
-    if (shift.shiftType !== 'ANNUAL_LEAVE') continue;
-
-    if (shift.date >= leaveYear.startDateIso && shift.date <= leaveYear.endDateIso) {
-      leaveShiftsInYear.push(shift);
-
-      const breakdown = shift.breakdown || calculateShiftBreakdown(shift);
-      const leaveDuration = breakdown.totalWorkedHours;
-
-      if (shift.status === 'REJECTED') {
-        // Rejected leave does not deduct from balance
-        continue;
-      }
-
-      if (shift.status === 'REQUESTED') {
-        requestedHours += leaveDuration;
-      } else {
-        totalApprovedInYear += leaveDuration;
-        if (shift.date <= todayIso) {
-          pastTakenInYear += leaveDuration;
-        } else {
-          futureApprovedInYear += leaveDuration;
-        }
-      }
-
-      if (shift.date.startsWith(monthPrefix) && shift.status !== 'REQUESTED') {
-        takenThisMonth += leaveDuration;
-      }
-    }
-  }
+  const {
+    requestedHours,
+    totalApprovedInYear,
+    pastTakenInYear,
+    futureApprovedInYear,
+    takenThisMonth,
+    leaveShiftsInYear,
+  } = aggregateLeaveHours(
+    allShifts,
+    leaveYear.startDateIso,
+    leaveYear.endDateIso,
+    referenceIsoDate,
+    monthPrefix
+  );
 
   const takenYearToDateHours = roundHours(totalApprovedInYear);
   const takenThisMonthHours = roundHours(takenThisMonth);

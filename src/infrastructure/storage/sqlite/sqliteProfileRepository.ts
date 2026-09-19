@@ -14,7 +14,7 @@ export const createSqliteProfileRepository = (
   const getProfile = async (): Promise<EmployeeProfile> => {
     const db = await getDatabase();
     const res = db.exec(
-      'SELECT employee_name, job_title, department, location, band, contract_type, full_time_salary_fte, standard_full_time_hours, contracted_weekly_hours, custom_hourly_rate, tax_code, ni_category, pension_contribution_rate, tax_office_name, tax_office_ref, ni_number, employee_number, pay_method, years_of_service_tier, al_carry_over_hours, afc_absence_hourly_rate, al_base_hours_override FROM employee_profile WHERE id = 1'
+      'SELECT employee_name, job_title, department, location, band, contract_type, full_time_salary_fte, standard_full_time_hours, contracted_weekly_hours, custom_hourly_rate, tax_code, ni_category, pension_contribution_rate, tax_office_name, tax_office_ref, ni_number, employee_number, pay_method, years_of_service_tier, al_carry_over_hours, afc_absence_hourly_rate, al_base_hours_override, al_in_lieu_hours, al_continuous_service_hours, al_adjustment_hours FROM employee_profile WHERE id = 1'
     );
     if (!res || res.length === 0 || res[0].values.length === 0) {
       return DEFAULT_GEMMA_PROFILE;
@@ -46,6 +46,9 @@ export const createSqliteProfileRepository = (
         row[21] !== null && row[21] !== undefined
           ? (row[21] as number)
           : DEFAULT_GEMMA_PROFILE.annualLeaveBaseHoursOverride,
+      annualLeaveInLieuHours: (row[22] as number) || 0,
+      annualLeaveContinuousServiceHours: (row[23] as number) || 0,
+      annualLeaveAdjustmentHours: (row[24] as number) || 0,
     };
   };
 

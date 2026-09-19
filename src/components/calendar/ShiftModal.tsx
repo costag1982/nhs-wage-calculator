@@ -22,7 +22,10 @@ import { ShiftBandSelector } from './shift-modal/ShiftBandSelector';
 import { ShiftBreakdownPreview } from './shift-modal/ShiftBreakdownPreview';
 import { LeaveDurationSelector } from './shift-modal/LeaveDurationSelector';
 import { SHIFT_PRESETS } from './shift-modal/shiftModalConstants';
-import { formatEpisodeDateRange } from '../../domain/services/annualLeaveCalculator';
+import {
+  formatEpisodeDateRange,
+  calculateAnnualLeaveEntitlement,
+} from '../../domain/services/annualLeaveCalculator';
 import { X, Trash2, Check, Sparkles, AlertTriangle, Info } from 'lucide-react';
 
 export { calculateShiftGrossImpact };
@@ -66,6 +69,11 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
 }) => {
   const [shiftType, setShiftType] = useState<ShiftWorkType>(
     initialShift?.shiftType || 'SUBSTANTIVE'
+  );
+
+  const totalLeavePot = useMemo(
+    () => (profile ? calculateAnnualLeaveEntitlement(profile).totalEntitlementHours : 187.5),
+    [profile]
   );
   const [presetType, setPresetType] = useState<ShiftPresetType>(
     initialShift?.presetType ||
@@ -883,7 +891,8 @@ const ShiftModalContent: React.FC<ShiftModalProps> = ({
                   <span>
                     <strong>NHS AfC Shift Deduction Rule:</strong> Annual leave is deducted as the
                     exact net hours of your rostered shift (e.g. 10.0h Night Duty, 11.0h Long Day,
-                    or 7.5h Standard Day) from your 192.5h pot. Unpaid meal breaks are excluded.
+                    or 7.5h Standard Day) from your {totalLeavePot}h pot. Unpaid meal breaks are
+                    excluded.
                   </span>
                 </div>
               </div>

@@ -1,14 +1,20 @@
 import React from 'react';
 import { PayslipSummary } from '../../domain/models/Payslip';
+import { AnnualLeaveBalanceSummary } from '../../domain/services/annualLeaveCalculator';
 import { formatHours } from '../../domain/utils/mathUtils';
-import { Banknote, Clock, ShieldAlert, Sparkles, Timer } from 'lucide-react';
+import { Banknote, Clock, ShieldAlert, Sparkles, Timer, Palmtree } from 'lucide-react';
 
 interface MetricCardsProps {
   summary: PayslipSummary;
+  leaveSummary?: AnnualLeaveBalanceSummary;
   onLeaveClick?: () => void;
 }
 
-export const MetricCards: React.FC<MetricCardsProps> = ({ summary, onLeaveClick }) => {
+export const MetricCards: React.FC<MetricCardsProps> = ({
+  summary,
+  leaveSummary,
+  onLeaveClick,
+}) => {
   const formatCurrency = (val: number) =>
     `£${val.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -155,6 +161,84 @@ export const MetricCards: React.FC<MetricCardsProps> = ({ summary, onLeaveClick 
           )}
         </div>
       </div>
+
+      {/* Annual Leave Allowance vs Taken */}
+      {leaveSummary && (
+        <div
+          className="metric-card"
+          onClick={onLeaveClick}
+          style={{ cursor: onLeaveClick ? 'pointer' : 'default' }}
+          title={onLeaveClick ? 'Click to open Annual Leave & HealthRoster Tracker' : undefined}
+        >
+          <div className="metric-header">
+            <span className="metric-title">Annual Leave ({leaveSummary.leaveYearLabel})</span>
+            <div className="metric-icon" style={{ background: '#ecfdf5' }}>
+              <Palmtree size={20} color="var(--emerald)" />
+            </div>
+          </div>
+          <div className="metric-value tabular-nums hours-fraction">
+            <span style={{ color: 'var(--emerald)' }}>{leaveSummary.remainingHours}h</span>
+            <span className="hours-fraction-divider">remaining</span>
+          </div>
+
+          {/* Segmented Progress Bar */}
+          <div
+            className="hours-progress-bar"
+            style={{
+              display: 'flex',
+              overflow: 'hidden',
+              background: '#e2e8f0',
+              height: '8px',
+              borderRadius: '999px',
+              margin: '0.4rem 0',
+            }}
+          >
+            {/* Taken (Green) */}
+            <div
+              style={{
+                width: `${Math.min(100, (leaveSummary.takenHours / (leaveSummary.entitlement.totalEntitlementHours || 1)) * 100)}%`,
+                background: '#22c55e',
+                transition: 'width 0.3s ease',
+              }}
+              title={`Taken: ${leaveSummary.takenHours}h`}
+            />
+            {/* Approved (Blue) */}
+            <div
+              style={{
+                width: `${Math.min(100, (leaveSummary.approvedHours / (leaveSummary.entitlement.totalEntitlementHours || 1)) * 100)}%`,
+                background: '#3b82f6',
+                transition: 'width 0.3s ease',
+              }}
+              title={`Approved: ${leaveSummary.approvedHours}h`}
+            />
+            {/* Requested (Yellow) */}
+            <div
+              style={{
+                width: `${Math.min(100, (leaveSummary.requestedHours / (leaveSummary.entitlement.totalEntitlementHours || 1)) * 100)}%`,
+                background: '#eab308',
+                transition: 'width 0.3s ease',
+              }}
+              title={`Requested: ${leaveSummary.requestedHours}h`}
+            />
+          </div>
+
+          <div
+            className="metric-subtitle"
+            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+          >
+            <span>
+              <strong>{leaveSummary.takenHours}h</strong> taken •{' '}
+              <strong>{leaveSummary.approvedHours}h</strong> appvd /{' '}
+              {leaveSummary.entitlement.totalEntitlementHours}h pot
+            </span>
+            {onLeaveClick && (
+              <span style={{ color: 'var(--emerald)', fontWeight: 600, fontSize: '0.75rem' }}>
+                Tracker →
+              </span>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Net Take-Home Pay (Highlighted) */}
       <div className="metric-card highlight-net">

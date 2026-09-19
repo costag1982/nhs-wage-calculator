@@ -3,6 +3,9 @@ import { calculateMonthlyPayslip } from '../domain/services/wageCalculatorServic
 import {
   calculateAnnualLeaveEntitlement,
   calculateAnnualLeaveBalance,
+  formatEpisodeDateRange,
+  formatLeaveYearDisplayRange,
+  calculateLeaveYearCountdown,
 } from '../domain/services/annualLeaveCalculator';
 import { EmployeeProfile } from '../domain/models/Contract';
 import { Shift } from '../domain/models/Shift';
@@ -674,6 +677,182 @@ describe('NHS Annual Leave & Entitlement (AfC Section 13)', () => {
       expect(balance.episodes[0].totalHours).toBe(26.0);
       expect(balance.takenYearToDateHours).toBe(26.0);
       expect(balance.remainingHours).toBe(166.5); // 192.5 - 26.0 = 166.5
+    });
+
+    it('accurately calculates entitlement breakdown with Base (187.5h), In Lieu, Continuous Service, and Adjustments', () => {
+      const profileWithAdjustments: EmployeeProfile = {
+        ...liveGemmaProfile,
+        annualLeaveBaseHoursOverride: 187.5,
+        annualLeaveCarryOverHours: 10.0,
+        annualLeaveInLieuHours: 5.5,
+        annualLeaveContinuousServiceHours: 7.5,
+        annualLeaveAdjustmentHours: -2.5,
+      };
+
+      const entitlement = calculateAnnualLeaveEntitlement(profileWithAdjustments);
+
+      expect(entitlement.baseHours).toBe(187.5);
+      expect(entitlement.carryOverHours).toBe(10.0);
+      expect(entitlement.inLieuHours).toBe(5.5);
+      expect(entitlement.continuousServiceHours).toBe(7.5);
+      expect(entitlement.adjustmentHours).toBe(-2.5);
+      // 187.5 + 10.0 + 5.5 + 7.5 - 2.5 = 208.0h
+      expect(entitlement.totalEntitlementHours).toBe(208.0);
+    });
+
+    it('reproduces exact Allocate HealthRoster Leave screenshot balance: 187.5h Base, 134.0h Taken, 51.5h Approved, 0 Requested -> 2.0h Remaining', () => {
+      const healthRosterProfile: EmployeeProfile = {
+        ...liveGemmaProfile,
+        annualLeaveBaseHoursOverride: 187.5,
+        annualLeaveCarryOverHours: 0,
+        annualLeaveInLieuHours: 0,
+        annualLeaveContinuousServiceHours: 0,
+        annualLeaveAdjustmentHours: 0,
+      };
+
+      // Past shifts totaling 134.0h
+      const takenShifts: Shift[] = [
+        {
+          id: 'taken-1',
+          date: '2026-05-10',
+          startTime: '08:00',
+          endTime: '18:00',
+          unpaidBreakMinutes: 0, // 10.0h
+          shiftType: 'ANNUAL_LEAVE',
+        },
+        {
+          id: 'taken-2',
+          date: '2026-06-15',
+          startTime: '08:00',
+          endTime: '20:00',
+          unpaidBreakMinutes: 0, // 12.0h
+          shiftType: 'ANNUAL_LEAVE',
+        },
+        {
+          id: 'taken-3',
+          date: '2026-07-01',
+          startTime: '00:00',
+          endTime: '23:00',
+          unpaidBreakMinutes: 0, // 23.0h
+          shiftType: 'ANNUAL_LEAVE',
+        },
+        {
+          id: 'taken-4',
+          date: '2026-07-02',
+          startTime: '00:00',
+          endTime: '23:00',
+          unpaidBreakMinutes: 0, // 23.0h
+          shiftType: 'ANNUAL_LEAVE',
+        },
+        {
+          id: 'taken-5',
+          date: '2026-07-03',
+          startTime: '00:00',
+          endTime: '23:00',
+          unpaidBreakMinutes: 0, // 23.0h
+          shiftType: 'ANNUAL_LEAVE',
+        },
+        {
+          id: 'taken-6',
+          date: '2026-07-04',
+          startTime: '00:00',
+          endTime: '23:00',
+          unpaidBreakMinutes: 0, // 23.0h
+          shiftType: 'ANNUAL_LEAVE',
+        },
+        {
+          id: 'taken-7',
+          date: '2026-08-01',
+          startTime: '08:00',
+          endTime: '18:00',
+          unpaidBreakMinutes: 0, // 10.0h
+          shiftType: 'ANNUAL_LEAVE',
+        },
+        {
+          id: 'taken-8',
+          date: '2026-08-02',
+          startTime: '08:00',
+          endTime: '18:00',
+          unpaidBreakMinutes: 0, // 10.0h
+          shiftType: 'ANNUAL_LEAVE',
+        },
+      ]; // Total taken: 10 + 12 + 23 + 23 + 23 + 23 + 10 + 10 = 134.0h
+
+      // Future approved shifts totaling 51.5h
+      const approvedShifts: Shift[] = [
+        {
+          id: 'appvd-1',
+          date: '2026-11-01',
+          startTime: '08:00',
+          endTime: '18:30',
+          unpaidBreakMinutes: 0, // 10.5h
+          shiftType: 'ANNUAL_LEAVE',
+        },
+        {
+          id: 'appvd-2',
+          date: '2026-12-01',
+          startTime: '08:00',
+          endTime: '21:00',
+          unpaidBreakMinutes: 0, // 13.0h
+          shiftType: 'ANNUAL_LEAVE',
+        },
+        {
+          id: 'appvd-3',
+          date: '2027-01-15',
+          startTime: '08:00',
+          endTime: '22:00',
+          unpaidBreakMinutes: 0, // 14.0h
+          shiftType: 'ANNUAL_LEAVE',
+        },
+        {
+          id: 'appvd-4',
+          date: '2027-02-20',
+          startTime: '08:00',
+          endTime: '22:00',
+          unpaidBreakMinutes: 0, // 14.0h
+          shiftType: 'ANNUAL_LEAVE',
+        },
+      ]; // Total approved: 10.5 + 13 + 14 + 14 = 51.5h
+
+      const balance = calculateAnnualLeaveBalance(
+        healthRosterProfile,
+        [...takenShifts, ...approvedShifts],
+        new Date(2026, 8, 19) // 19 Sep 2026
+      );
+
+      expect(balance.entitlement.totalEntitlementHours).toBe(187.5);
+      expect(balance.entitlement.baseHours).toBe(187.5);
+      expect(balance.takenHours).toBe(134.0);
+      expect(balance.approvedHours).toBe(51.5);
+      expect(balance.requestedHours).toBe(0);
+      expect(balance.remainingHours).toBe(2.0); // 187.5 - 134.0 - 51.5 = 2.0h
+      expect(balance.countdownText).toBe('Entitlement ends in 6 months and 12 days');
+    });
+
+    describe('Date Formatting and Countdown Pure Functions', () => {
+      it('formats single date and date range correctly for UK display', () => {
+        expect(formatEpisodeDateRange('2026-04-02', '2026-04-02')).toBe('02 Apr 2026');
+        expect(formatEpisodeDateRange('2026-04-02', '2026-04-08')).toBe(
+          '02 Apr 2026 - 08 Apr 2026'
+        );
+      });
+
+      it('formats leave year display range without spaces around hyphen matching HealthRoster header', () => {
+        expect(formatLeaveYearDisplayRange('2026-04-01', '2027-03-31')).toBe(
+          '01 Apr 2026-31 Mar 2027'
+        );
+      });
+
+      it('calculates countdown accurately or reports expiration', () => {
+        const fromDate = new Date(2026, 8, 3); // 3 Sept 2026
+        const endDate = new Date(2027, 2, 31); // 31 March 2027
+        expect(calculateLeaveYearCountdown(fromDate, endDate)).toBe(
+          'Entitlement ends in 6 months and 28 days'
+        );
+
+        const pastDate = new Date(2027, 4, 1);
+        expect(calculateLeaveYearCountdown(pastDate, endDate)).toBe('Entitlement period has ended');
+      });
     });
   });
 });
