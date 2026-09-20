@@ -342,21 +342,24 @@ export const PayPeriodsView: React.FC<PayPeriodsViewProps> = ({
                   <thead>
                     <tr>
                       <th className="text-left th-period">Pay Period</th>
-                      <th className="text-center th-shifts">Total Shifts</th>
+                      <th className="text-center th-shifts">Shifts</th>
                       <th className="text-center th-contracted">Contracted</th>
-                      <th className="text-center th-worked">Actual Worked</th>
+                      <th className="text-center th-worked">Worked</th>
                       <th className="text-center th-leave">Annual Leave</th>
                       <th
                         className="text-center th-accounted"
                         title="Actual Worked + Annual Leave (Accounted towards contracted hours)"
                       >
-                        <div>Total Accounted</div>
+                        <div>Accounted</div>
                         <div className="th-sublabel">Worked + Leave</div>
                       </th>
                       <th className="text-center th-extra">Extra Hours</th>
                       <th className="text-center th-paid">Extra Paid</th>
-                      <th className="text-center th-unpaid">Potentially Unpaid</th>
-                      <th className="text-right th-enhancements">Enhancements Due</th>
+                      <th className="text-center th-unpaid">
+                        <div>Potentially</div>
+                        <div>Unpaid</div>
+                      </th>
+                      <th className="text-right th-enhancements">Enhancements</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -489,48 +492,33 @@ export const PayPeriodsView: React.FC<PayPeriodsViewProps> = ({
                             )}
                           </td>
 
-                          {/* 8. Enhancements due */}
+                          {/* 8. Enhancements */}
                           <td className="text-right tabular-nums">
-                            <div className="enhancements-cell-wrapper">
-                              <span className="enhancements-val font-bold">
-                                £{row.enhancementsDue.toFixed(2)}
-                              </span>
-                              {/* Unsocial pill breakdown */}
-                              <div className="enhancements-pill-row">
-                                {row.enhancementHours.nightHours > 0 && (
-                                  <span
-                                    className="enhancement-micro-badge badge-night"
-                                    title="Night Duty Hours"
-                                  >
-                                    🌙 {row.enhancementHours.nightHours}h
-                                  </span>
-                                )}
-                                {row.enhancementHours.saturdayHours > 0 && (
-                                  <span
-                                    className="enhancement-micro-badge badge-sat"
-                                    title="Saturday Hours"
-                                  >
-                                    Sat: {row.enhancementHours.saturdayHours}h
-                                  </span>
-                                )}
-                                {row.enhancementHours.sundayHours > 0 && (
-                                  <span
-                                    className="enhancement-micro-badge badge-sun"
-                                    title="Sunday Hours"
-                                  >
-                                    Sun: {row.enhancementHours.sundayHours}h
-                                  </span>
-                                )}
-                                {row.enhancementHours.bankHolidayHours > 0 && (
-                                  <span
-                                    className="enhancement-micro-badge badge-bh"
-                                    title="Bank Holiday Hours"
-                                  >
-                                    BH: {row.enhancementHours.bankHolidayHours}h
-                                  </span>
-                                )}
-                              </div>
-                            </div>
+                            <span
+                              className="enhancements-val font-bold"
+                              title={
+                                row.enhancementsDue > 0
+                                  ? `Enhancements: £${row.enhancementsDue.toFixed(2)} total (${[
+                                      row.enhancementHours.nightHours > 0
+                                        ? `${row.enhancementHours.nightHours}h night`
+                                        : '',
+                                      row.enhancementHours.saturdayHours > 0
+                                        ? `${row.enhancementHours.saturdayHours}h Sat`
+                                        : '',
+                                      row.enhancementHours.sundayHours > 0
+                                        ? `${row.enhancementHours.sundayHours}h Sun`
+                                        : '',
+                                      row.enhancementHours.bankHolidayHours > 0
+                                        ? `${row.enhancementHours.bankHolidayHours}h BH`
+                                        : '',
+                                    ]
+                                      .filter(Boolean)
+                                      .join(', ')})`
+                                  : 'No unsocial enhancements'
+                              }
+                            >
+                              £{row.enhancementsDue.toFixed(2)}
+                            </span>
                           </td>
                         </tr>
                       );
