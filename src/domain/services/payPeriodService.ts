@@ -29,8 +29,9 @@ export interface PayPeriodSummaryRow {
   taxPeriod: number; // e.g. 4
   shiftCount: number;
   contractedHours: number; // Monthly contracted basic hours (e.g. 112.67)
-  actualHoursWorked: number; // Total shift hours worked in month
-  extraHours: number; // Actual hours - Contracted hours (can be positive or negative)
+  actualHoursWorked: number; // Total physical shift hours worked in month (excluding annual leave)
+  annualLeaveHours: number; // Total annual leave hours taken in month
+  extraHours: number; // Accounted hours (worked + annual leave) - Contracted hours
   extraHoursPaid: number; // Overtime + Additional + Bank hours paid
   potentiallyUnpaidHours: number; // Excess hours worked above contracted that are not paid as overtime/bank
   potentiallyUnpaidAmount: number; // Estimated value in £
@@ -45,6 +46,7 @@ export interface PayPeriodsTotals {
   totalShifts: number;
   totalContractedHours: number;
   totalActualHoursWorked: number;
+  totalAnnualLeaveHours: number;
   totalExtraHours: number;
   totalExtraHoursPaid: number;
   totalPotentiallyUnpaidHours: number;
@@ -78,9 +80,17 @@ export const calculatePayPeriodRow = (
   const payPeriodDisplay = `Worked ${rosterMonthLabel} (Paid ${payMonthLabel})`;
 
   const contractedHours = profile.contractType === 'SUBSTANTIVE' ? summary.monthlyBasicHours : 0;
-  const actualHoursWorked = summary.hoursBreakdown.totalWorkedHours;
+  const annualLeaveHours = summary.annualLeaveHours ?? 0;
+  const actualHoursWorked = roundHours(
+    Math.max(0, summary.hoursBreakdown.totalWorkedHours - annualLeaveHours)
+  );
 
-  const extraHours = roundHours(actualHoursWorked - contractedHours);
+  // Annual leave is paid and deducts from monthly contracted obligation:
+  // Extra hours = Accounted hours (worked + annual leave) - contracted hours
+  const extraHours =
+    profile.contractType === 'SUBSTANTIVE'
+      ? roundHours(actualHoursWorked + annualLeaveHours - contractedHours)
+      : actualHoursWorked;
 
   // Extra hours paid: additional hours + overtime hours + bank hours
   let extraHoursPaid = 0;
@@ -113,6 +123,7 @@ export const calculatePayPeriodRow = (
     shiftCount: monthShifts.length,
     contractedHours,
     actualHoursWorked,
+    annualLeaveHours,
     extraHours,
     extraHoursPaid,
     potentiallyUnpaidHours,
@@ -215,6 +226,7 @@ export const calculatePayPeriodsTotals = (rows: PayPeriodSummaryRow[]): PayPerio
     totalShifts: 0,
     totalContractedHours: 0,
     totalActualHoursWorked: 0,
+    totalAnnualLeaveHours: 0,
     totalExtraHours: 0,
     totalExtraHoursPaid: 0,
     totalPotentiallyUnpaidHours: 0,
@@ -228,6 +240,7 @@ export const calculatePayPeriodsTotals = (rows: PayPeriodSummaryRow[]): PayPerio
     totals.totalShifts += row.shiftCount;
     totals.totalContractedHours += row.contractedHours;
     totals.totalActualHoursWorked += row.actualHoursWorked;
+    totals.totalAnnualLeaveHours += row.annualLeaveHours;
     totals.totalExtraHours += row.extraHours;
     totals.totalExtraHoursPaid += row.extraHoursPaid;
     totals.totalPotentiallyUnpaidHours += row.potentiallyUnpaidHours;
@@ -241,6 +254,7 @@ export const calculatePayPeriodsTotals = (rows: PayPeriodSummaryRow[]): PayPerio
     totalShifts: totals.totalShifts,
     totalContractedHours: roundHours(totals.totalContractedHours),
     totalActualHoursWorked: roundHours(totals.totalActualHoursWorked),
+    totalAnnualLeaveHours: roundHours(totals.totalAnnualLeaveHours),
     totalExtraHours: roundHours(totals.totalExtraHours),
     totalExtraHoursPaid: roundHours(totals.totalExtraHoursPaid),
     totalPotentiallyUnpaidHours: roundHours(totals.totalPotentiallyUnpaidHours),
@@ -273,6 +287,7 @@ export const exportPayPeriodsToCsv = (
     'Tax Period',
     'Contracted Hours',
     'Actual Hours Worked',
+    'Annual Leave Hours',
     'Extra Hours',
     'Extra Hours Paid',
     'Potentially Unpaid Hours',
@@ -293,6 +308,7 @@ export const exportPayPeriodsToCsv = (
       `Month ${r.taxPeriod}`,
       r.contractedHours.toFixed(2),
       r.actualHoursWorked.toFixed(2),
+      r.annualLeaveHours.toFixed(2),
       r.extraHours.toFixed(2),
       r.extraHoursPaid.toFixed(2),
       r.potentiallyUnpaidHours.toFixed(2),
@@ -313,6 +329,7 @@ export const exportPayPeriodsToCsv = (
     '-',
     totals.totalContractedHours.toFixed(2),
     totals.totalActualHoursWorked.toFixed(2),
+    totals.totalAnnualLeaveHours.toFixed(2),
     totals.totalExtraHours.toFixed(2),
     totals.totalExtraHoursPaid.toFixed(2),
     totals.totalPotentiallyUnpaidHours.toFixed(2),

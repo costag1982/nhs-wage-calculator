@@ -144,9 +144,104 @@ describe('payPeriodService', () => {
 
       expect(row.contractedHours).toBe(0);
       expect(row.actualHoursWorked).toBe(7.5);
+      expect(row.annualLeaveHours).toBe(0);
       expect(row.extraHours).toBe(7.5);
       expect(row.extraHoursPaid).toBe(7.5);
       expect(row.potentiallyUnpaidHours).toBe(0);
+    });
+
+    it('factors in annual leave taken in a given month by deducting it from monthly contracted hours', () => {
+      const rosterMonth = new Date(2026, 7, 1); // August 2026
+      // 8 substantive shifts of 10 hrs = 80.00 hrs
+      const shifts: Shift[] = [];
+      for (let i = 1; i <= 8; i++) {
+        const dayStr = String(i).padStart(2, '0');
+        shifts.push({
+          id: `work-${i}`,
+          date: `2026-08-${dayStr}`,
+          startTime: '08:00',
+          endTime: '18:00',
+          unpaidBreakMinutes: 0,
+          shiftType: 'SUBSTANTIVE',
+        });
+      }
+
+      // Annual leave shift totaling 32.98 hours (e.g. block booking)
+      // 32.98 hours = 32 hours 59 minutes (or two shifts: 22h and 10.98h)
+      // For precise testing: 00:00 to 23:00 (23h) + 08:00 to 17:59 (9.98h)
+      shifts.push(
+        {
+          id: 'leave-1',
+          date: '2026-08-10',
+          startTime: '00:00',
+          endTime: '23:00',
+          unpaidBreakMinutes: 0, // 23.0 hrs
+          shiftType: 'ANNUAL_LEAVE',
+        },
+        {
+          id: 'leave-2',
+          date: '2026-08-11',
+          startTime: '08:00',
+          endTime: '17:59', // 9h 59m = 9.983 hrs -> 9.98 hrs
+          unpaidBreakMinutes: 0,
+          shiftType: 'ANNUAL_LEAVE',
+        }
+      );
+
+      const row = calculatePayPeriodRow(mockProfile, shifts, [], rosterMonth, shifts);
+
+      expect(row.contractedHours).toBe(112.98);
+      expect(row.actualHoursWorked).toBe(80.0);
+      expect(row.annualLeaveHours).toBe(32.98);
+      // Accounted hours = 80.00 + 32.98 = 112.98 hrs -> Extra hours = 0.00 hrs (no deficit!)
+      expect(row.extraHours).toBe(0.0);
+      expect(row.potentiallyUnpaidHours).toBe(0);
+    });
+
+    it('calculates extra hours when actual worked plus annual leave exceeds contracted hours', () => {
+      const rosterMonth = new Date(2026, 7, 1); // August 2026
+      // 9 substantive shifts of 10 hrs = 90.00 hrs
+      const shifts: Shift[] = [];
+      for (let i = 1; i <= 9; i++) {
+        const dayStr = String(i).padStart(2, '0');
+        shifts.push({
+          id: `work-${i}`,
+          date: `2026-08-${dayStr}`,
+          startTime: '08:00',
+          endTime: '18:00',
+          unpaidBreakMinutes: 0,
+          shiftType: 'SUBSTANTIVE',
+        });
+      }
+
+      // Annual leave shifts: 23h + 9.98h = 32.98 hrs
+      shifts.push(
+        {
+          id: 'leave-1',
+          date: '2026-08-15',
+          startTime: '00:00',
+          endTime: '23:00',
+          unpaidBreakMinutes: 0,
+          shiftType: 'ANNUAL_LEAVE',
+        },
+        {
+          id: 'leave-2',
+          date: '2026-08-16',
+          startTime: '08:00',
+          endTime: '17:59',
+          unpaidBreakMinutes: 0,
+          shiftType: 'ANNUAL_LEAVE',
+        }
+      );
+
+      const row = calculatePayPeriodRow(mockProfile, shifts, [], rosterMonth, shifts);
+
+      expect(row.contractedHours).toBe(112.98);
+      expect(row.actualHoursWorked).toBe(90.0);
+      expect(row.annualLeaveHours).toBe(32.98);
+      // Accounted hours = 90.00 + 32.98 = 122.98 hrs -> Extra hours = 10.00 hrs
+      expect(row.extraHours).toBe(10.0);
+      expect(row.potentiallyUnpaidHours).toBe(10.0);
     });
   });
 
@@ -200,7 +295,9 @@ describe('payPeriodService', () => {
       const row = calculatePayPeriodRow(mockProfile, shifts, [], rosterMonth, shifts);
       const csv = exportPayPeriodsToCsv([row], mockProfile);
 
-      expect(csv).toContain('Worked Month,Payment Month,Tax Period,Contracted Hours');
+      expect(csv).toContain(
+        'Worked Month,Payment Month,Tax Period,Contracted Hours,Actual Hours Worked,Annual Leave Hours'
+      );
       expect(csv).toContain('June 2026,July 2026,Month 4');
       expect(csv).toContain('TOTALS');
     });

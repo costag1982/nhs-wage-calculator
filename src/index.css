@@ -1767,6 +1767,21 @@ input[type='time']::-webkit-calendar-picker-indicator:hover {
   border: 1px solid #c7d2fe;
 }
 
+.badge-leave-hours {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  min-width: 80px;
+  padding: 0.25rem 0.55rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  background-color: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
 .unpaid-badge-container {
   display: inline-flex;
   flex-direction: column;

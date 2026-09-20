@@ -9,7 +9,8 @@
  */
 export const roundToDecimals = (val: number, decimals: number): number => {
   const factor = Math.pow(10, decimals);
-  return Math.round((val + Number.EPSILON) * factor) / factor;
+  const rounded = Math.round((val + Number.EPSILON) * factor) / factor;
+  return rounded === 0 ? 0 : rounded;
 };
 
 /**
