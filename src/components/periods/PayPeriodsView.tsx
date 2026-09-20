@@ -465,15 +465,9 @@ export const PayPeriodsView: React.FC<PayPeriodsViewProps> = ({
                                 </span>
                               </div>
                             ) : (
-                              <div>
-                                {row.extraHours > 0 && row.extraHoursPaid >= row.extraHours ? (
-                                  <span className="badge-unpaid-cleared">
-                                    <CheckCircle2 size={13} /> All Paid
-                                  </span>
-                                ) : (
-                                  <span className="text-muted font-normal">0.00 hrs</span>
-                                )}
-                              </div>
+                              <span className="text-muted font-normal" title="No unpaid hours">
+                                0.00 hrs
+                              </span>
                             )}
                           </td>
 
