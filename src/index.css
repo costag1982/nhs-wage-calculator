@@ -1609,6 +1609,15 @@ input[type='time']::-webkit-calendar-picker-indicator:hover {
   white-space: nowrap;
 }
 
+.th-sublabel {
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: none;
+  letter-spacing: normal;
+  margin-top: 2px;
+}
+
 .period-reconciliation-table td {
   padding: 1rem 1rem;
   vertical-align: middle;

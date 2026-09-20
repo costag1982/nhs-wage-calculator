@@ -239,6 +239,7 @@ describe('payPeriodService', () => {
       expect(row.contractedHours).toBe(112.98);
       expect(row.actualHoursWorked).toBe(90.0);
       expect(row.annualLeaveHours).toBe(32.98);
+      expect(row.totalAccountedHours).toBe(122.98);
       // Accounted hours = 90.00 + 32.98 = 122.98 hrs -> Extra hours = 10.00 hrs
       expect(row.extraHours).toBe(10.0);
       expect(row.potentiallyUnpaidHours).toBe(10.0);
@@ -274,6 +275,7 @@ describe('payPeriodService', () => {
       const totals = calculatePayPeriodsTotals(rows);
       expect(totals.totalShifts).toBe(2);
       expect(totals.totalActualHoursWorked).toBe(15.0);
+      expect(totals.totalAccountedHours).toBe(15.0);
       expect(totals.totalContractedHours).toBe(225.96);
     });
   });

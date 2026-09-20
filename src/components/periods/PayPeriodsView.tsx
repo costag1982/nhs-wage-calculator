@@ -250,7 +250,7 @@ export const PayPeriodsView: React.FC<PayPeriodsViewProps> = ({
               </div>
               <div className="period-kpi-footer">
                 {totals.totalAnnualLeaveHours > 0
-                  ? `${totals.totalShifts} shifts · ${totals.totalAnnualLeaveHours.toFixed(1)}h leave taken`
+                  ? `${totals.totalAccountedHours.toFixed(1)}h accounted (${totals.totalActualHoursWorked.toFixed(1)}h worked + ${totals.totalAnnualLeaveHours.toFixed(1)}h leave)`
                   : `${totals.totalShifts} recorded shifts across periods`}
               </div>
             </div>
@@ -346,6 +346,13 @@ export const PayPeriodsView: React.FC<PayPeriodsViewProps> = ({
                       <th className="text-center th-contracted">Contracted</th>
                       <th className="text-center th-worked">Actual Worked</th>
                       <th className="text-center th-leave">Annual Leave</th>
+                      <th
+                        className="text-center th-accounted"
+                        title="Actual Worked + Annual Leave (Accounted towards contracted hours)"
+                      >
+                        <div>Total Accounted</div>
+                        <div className="th-sublabel">Worked + Leave</div>
+                      </th>
                       <th className="text-center th-extra">Extra Hours</th>
                       <th className="text-center th-paid">Extra Paid</th>
                       <th className="text-center th-unpaid">Potentially Unpaid</th>
@@ -421,7 +428,18 @@ export const PayPeriodsView: React.FC<PayPeriodsViewProps> = ({
                             )}
                           </td>
 
-                          {/* 6. Extra hours */}
+                          {/* 6. Total Accounted (Worked + Leave) */}
+                          <td className="text-center tabular-nums">
+                            <div
+                              className="hours-cell font-bold"
+                              title={`${row.actualHoursWorked.toFixed(2)}h worked + ${row.annualLeaveHours.toFixed(2)}h leave = ${row.totalAccountedHours.toFixed(2)}h accounted vs ${row.contractedHours.toFixed(2)}h contracted`}
+                            >
+                              <span>{row.totalAccountedHours.toFixed(2)}</span>
+                              <span className="hours-unit">hrs</span>
+                            </div>
+                          </td>
+
+                          {/* 7. Extra hours */}
                           <td className="text-center tabular-nums">
                             {isPositiveExtra && (
                               <span className="badge-extra-hours badge-positive">
@@ -552,6 +570,15 @@ export const PayPeriodsView: React.FC<PayPeriodsViewProps> = ({
                         ) : (
                           <span className="text-muted">0.00 hrs</span>
                         )}
+                      </td>
+                      <td className="text-center tabular-nums font-bold">
+                        <div
+                          className="hours-cell"
+                          title={`${totals.totalActualHoursWorked.toFixed(2)}h worked + ${totals.totalAnnualLeaveHours.toFixed(2)}h leave = ${totals.totalAccountedHours.toFixed(2)}h total accounted`}
+                        >
+                          <span>{totals.totalAccountedHours.toFixed(2)}</span>
+                          <span className="hours-unit">hrs</span>
+                        </div>
                       </td>
                       <td className="text-center tabular-nums font-bold">
                         <span
